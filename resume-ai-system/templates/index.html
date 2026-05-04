@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume AI Screening Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg app-nav">
+    <div class="container-fluid dashboard-shell">
+      <span class="navbar-brand"><i class="fa-solid fa-file-shield"></i> Resume AI System</span>
+    </div>
+  </nav>
+
+  <main class="dashboard-shell">
+    <section class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Final Year Project</span>
+        <h1>Intelligent resume ranking for faster, fairer hiring decisions.</h1>
+        <p>
+          Parse PDF and DOCX resumes, compare them against job requirements, and rank candidates using
+          a data-driven scoring workflow built for recruitment teams.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#screening-form"><i class="fa-solid fa-upload"></i> Upload resumes</a>
+          <a class="btn btn-outline-light" href="#features"><i class="fa-solid fa-chart-simple"></i> View features</a>
+        </div>
+      </div>
+      <div class="metrics-panel" aria-label="Project highlights">
+        <div>
+          <strong>70%+</strong>
+          <span>Auto-shortlist threshold</span>
+        </div>
+        <div>
+          <strong>50+</strong>
+          <span>Batch resumes supported</span>
+        </div>
+        <div>
+          <strong>85%+</strong>
+          <span>Target skill extraction accuracy</span>
+        </div>
+        <div>
+          <strong>80%</strong>
+          <span>Potential time-to-hire reduction</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="screening-form" class="workbench">
+      <div class="section-heading">
+        <span class="eyebrow">Candidate Screening</span>
+        <h2>Rank resumes against a job description</h2>
+      </div>
+      <form action="/rank" method="post" enctype="multipart/form-data" class="upload-form">
+        <div class="form-group">
+          <label for="job_description">Job description</label>
+          <textarea id="job_description" name="job_description" rows="7" placeholder="Paste the role requirements, responsibilities, skills, experience, and education expectations here."></textarea>
+        </div>
+
+        <div class="form-group file-zone">
+          <label for="resumes">Upload resumes</label>
+          <input id="resumes" type="file" name="resumes" accept=".pdf,.docx" multiple>
+          <small>Supported formats: PDF and DOCX. Multiple files can be uploaded together.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary submit-btn">
+          <i class="fa-solid fa-ranking-star"></i> Rank Candidates
+        </button>
+      </form>
+    </section>
+
+    <section id="features" class="content-grid">
+      <article>
+        <div class="icon-chip"><i class="fa-solid fa-file-lines"></i></div>
+        <h3>Intelligent Resume Parsing</h3>
+        <p>Extracts candidate name, email, phone, skills, experience, and education from PDF and DOCX resumes.</p>
+      </article>
+      <article>
+        <div class="icon-chip"><i class="fa-solid fa-brain"></i></div>
+        <h3>NLP-Powered Analysis</h3>
+        <p>Uses spaCy-style text processing to identify resume entities and normalize candidate information.</p>
+      </article>
+      <article>
+        <div class="icon-chip"><i class="fa-solid fa-scale-balanced"></i></div>
+        <h3>Multi-Dimensional Scoring</h3>
+        <p>Scores overall match, skills, experience, and education with weighted candidate ranking.</p>
+      </article>
+      <article>
+        <div class="icon-chip"><i class="fa-solid fa-layer-group"></i></div>
+        <h3>Batch Processing</h3>
+        <p>Designed for bulk resume uploads so HR teams can screen high volumes consistently.</p>
+      </article>
+    </section>
+
+    <section class="info-columns">
+      <div>
+        <div class="section-heading">
+          <span class="eyebrow">Technology Stack</span>
+          <h2>Built with practical AI recruitment tools</h2>
+        </div>
+        <ul class="stack-list">
+          <li><strong>Backend:</strong> Flask prototype, Python, SQLite/PostgreSQL-ready architecture.</li>
+          <li><strong>Machine Learning:</strong> spaCy, NLTK, scikit-learn, TF-IDF, cosine similarity.</li>
+          <li><strong>Document Processing:</strong> PyPDF2/pdfplumber and python-docx for resume text extraction.</li>
+          <li><strong>Frontend:</strong> Bootstrap 5, Font Awesome, and custom responsive CSS.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-heading">
+          <span class="eyebrow">Applications</span>
+          <h2>Where the system fits</h2>
+        </div>
+        <div class="application-list">
+          <span>Corporate recruitment</span>
+          <span>Recruitment agencies</span>
+          <span>Startup hiring</span>
+          <span>Campus placements</span>
+          <span>Freelance platforms</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
