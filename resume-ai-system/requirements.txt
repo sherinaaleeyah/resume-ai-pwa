@@ -1,5 +1,6 @@
 Flask
 pdfplumber
-pyhton-docx
+python-docx
 spacy
 scikit-learn
+gunicorn
