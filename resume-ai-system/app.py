@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, send_from_directory
 import pdfplumber
 import docx
 import re
@@ -145,6 +145,10 @@ def rank_resumes():
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return render_template("result.html", results=results, required_skills=sorted(required_skills))
+
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory("static", "service-worker.js")
 
 if __name__ == "__main__":
     app.run(debug=True)
