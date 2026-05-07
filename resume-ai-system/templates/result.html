@@ -12,7 +12,11 @@
   <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <span class="navbar-brand"><i class="fa-solid fa-ranking-star"></i> Candidate Ranking</span>
-      <a class="btn btn-outline-light btn-sm" href="/recruiter"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      {% if job %}
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('job_detail', job_id=job.id) }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      {% else %}
+        <a class="btn btn-outline-light btn-sm" href="/recruiter"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      {% endif %}
     </div>
   </nav>
 
@@ -20,7 +24,7 @@
     <section class="results-header">
       <div>
         <span class="eyebrow">Automated Ranking System</span>
-        <h1>Ranked candidates</h1>
+        <h1>Ranked candidates{% if job %}: {{ job.title }}{% endif %}</h1>
         <p>Candidates scoring 70% or higher are marked as shortlisted. Skill gaps are shown for explainable review.</p>
       </div>
       <div class="shortlist-card">

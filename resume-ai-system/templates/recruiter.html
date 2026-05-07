@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resume AI Screening Dashboard</title>
+  <title>Hiring Intelligence Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -12,122 +12,393 @@
 <body>
   <nav class="navbar navbar-expand-lg app-nav">
     <div class="container-fluid dashboard-shell">
-      <span class="navbar-brand"><i class="fa-solid fa-file-shield"></i> Resume AI System</span>
-      <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back Home</a>
+      <span class="navbar-brand"><i class="fa-solid fa-chart-line"></i> Hiring Intelligence Dashboard</span>
+      <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back </a>
     </div>
   </nav>
- 
- <!-- Recruiter Section -->
-    <div id="recruiter-mode" class="mode-section">
-      <section class="hero-grid">
-      <div class="hero-copy">
-        <span class="eyebrow">Final Year Project</span>
-        <h1>Intelligent resume ranking for faster, fairer hiring decisions.</h1>
-        <p>
-          Parse PDF and DOCX resumes, compare them against job requirements, and rank candidates using
-          a data-driven scoring workflow built for recruitment teams.
-        </p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#screening-form"><i class="fa-solid fa-upload"></i> Upload resumes</a>
-          <a class="btn btn-outline-light" href="#features"><i class="fa-solid fa-chart-simple"></i> View features</a>
-        </div>
-      </div>
-      <div class="metrics-panel" aria-label="Project highlights">
-        <div>
-          <strong>70%+</strong>
-          <span>Auto-shortlist threshold</span>
-        </div>
-        <div>
-          <strong>50+</strong>
-          <span>Batch resumes supported</span>
-        </div>
-        <div>
-          <strong>85%+</strong>
-          <span>Target skill extraction accuracy</span>
-        </div>
-        <div>
-          <strong>80%</strong>
-          <span>Potential time-to-hire reduction</span>
-        </div>
-      </div>
-    </section>
 
-     <section id="screening-form" class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Candidate Screening</span>
-        <h2>Rank resumes against a job description</h2>
-      </div>
-      <form action="/rank" method="post" enctype="multipart/form-data" class="upload-form">
-        <div class="form-group">
-          <label for="job_description">Job description</label>
-          <textarea id="job_description" name="job_description" rows="7" placeholder="Paste the role requirements, responsibilities, skills, experience, and education expectations here."></textarea>
+  <main class="dashboard-shell">
+    {% if selected_job %}
+      <section class="job-detail-header">
+        <div>
+          <span class="eyebrow">Candidate Ranking</span>
+          <h1>{{ selected_job.title }}</h1>
+          <p>{{ selected_job.company }}</p>
         </div>
-
-        <div class="form-group file-zone">
-          <label for="resumes">Upload resumes</label>
-          <input id="resumes" type="file" name="resumes" accept=".pdf,.docx" multiple>
-          <small>Supported formats: PDF and DOCX. Multiple files can be uploaded together.</small>
+        <div class="job-header-metrics" aria-label="Job scoring metrics">
+          <div>
+            <strong>{{ job_metrics.total_candidates }}</strong>
+            <span>Total Candidates</span>
+          </div>
+          <div>
+            <strong>{{ job_metrics.top_score }}</strong>
+            <span>Top Score</span>
+          </div>
+          <div>
+            <strong>{{ job_metrics.average_score }}</strong>
+            <span>Avg Score</span>
+          </div>
         </div>
+        <a class="btn btn-outline-primary" href="{{ url_for('recruiter') }}">
+          <i class="fa-solid fa-table-columns"></i> Dashboard
+        </a>
+      </section>
 
-        <button type="submit" class="btn btn-primary submit-btn">
-          <i class="fa-solid fa-ranking-star"></i> Rank Candidates
-        </button>
-      </form>
-    </section>
-   
-    <section id="features" class="content-grid">
-      <article>
-        <div class="icon-chip"><i class="fa-solid fa-file-lines"></i></div>
-        <h3>Intelligent Resume Parsing</h3>
-        <p>Extracts candidate name, email, phone, skills, experience, and education from PDF and DOCX resumes.</p>
-      </article>
-      <article>
-        <div class="icon-chip"><i class="fa-solid fa-brain"></i></div>
-        <h3>NLP-Powered Analysis</h3>
-        <p>Uses spaCy-style text processing to identify resume entities and normalize candidate information.</p>
-      </article>
-      <article>
-        <div class="icon-chip"><i class="fa-solid fa-scale-balanced"></i></div>
-        <h3>Multi-Dimensional Scoring</h3>
-        <p>Scores overall match, skills, experience, and education with weighted candidate ranking.</p>
-      </article>
-      <article>
-        <div class="icon-chip"><i class="fa-solid fa-layer-group"></i></div>
-        <h3>Batch Processing</h3>
-        <p>Designed for bulk resume uploads so HR teams can screen high volumes consistently.</p>
-      </article>
-    </section>
+    <section class="job-review-grid">
+        <aside class="job-summary-panel">
+          <div class="section-heading">
+            <span class="eyebrow">Job Intelligence</span>
+            <h2>Edit job description</h2>
+          </div>
 
-    <section class="info-columns">
-      <div>
+          <details class="job-description-dropdown">
+            <summary>Update role details</summary>
+            <div class="description-content">
+              <form action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form">
+                <div class="form-group">
+                  <label for="edit-title">Job Title</label>
+                  <input id="edit-title" type="text" name="title" value="{{ selected_job.title }}" required>
+                </div>
+                <div class="form-group">
+                  <label for="edit-company">Company</label>
+                  <input id="edit-company" type="text" name="company" value="{{ selected_job.company }}" required>
+                </div>
+                <div class="form-group">
+                  <label for="edit-description">Job Description</label>
+                  <textarea id="edit-description" name="description" rows="8" required>{{ selected_job.description }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary submit-btn">
+                  <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                </button>
+              </form>
+            </div>
+          </details>
+
+          <h3>Detected Skills</h3>
+          <div class="skill-list">
+            {% if required_skills %}
+              {% for skill in required_skills %}
+                <span class="skill-tag">{{ skill }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="muted">No technical skills detected yet.</span>
+            {% endif %}
+          </div>
+        </aside>
+
+        <article class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Upload Zone</span>
+            <h2>Rank resumes for this job</h2>
+          </div>
+          <form id="resume-rank-form" action="{{ url_for('rank_job_resumes', job_id=selected_job.id) }}" method="post" enctype="multipart/form-data" class="upload-form">
+            <div class="form-group file-zone">
+              <label for="resumes">Upload PDF or DOCX resumes</label>
+              <input id="resumes" type="file" name="resumes" accept=".pdf,.docx" multiple required>
+              <small>Upload multiple resumes together. Confirm or edit each candidate name before scoring.</small>
+            </div>
+
+            <div class="modal fade" id="candidateNameModal" tabindex="-1" aria-labelledby="candidateNameModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <div>
+                      <h5 class="modal-title" id="candidateNameModalLabel">Review candidate names</h5>
+                      <p class="modal-subtitle">Confirm or edit each candidate name before scoring.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="candidateConfirmList" class="candidate-confirm-list"></div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                      <i class="fa-solid fa-check"></i> Confirm Names
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary submit-btn">
+              <i class="fa-solid fa-ranking-star"></i> Rank Candidates
+            </button>
+          </form>
+
+          <section class="ranked-candidates-section">
+            <div class="section-heading">
+              <span class="eyebrow">Ranked Candidates</span>
+              <h2>{{ ranked_candidates|length }} scored</h2>
+            </div>
+
+            {% if ranked_candidates %}
+              <div class="ranked-candidate-list">
+                {% for candidate in ranked_candidates %}
+                  <article class="ranked-candidate-card">
+                    <div class="ranked-candidate-main">
+                      <div>
+                        <h3>{{ candidate.candidate_name }}</h3>
+
+                        <span class="status status-good">{{ candidate.strength }}</span>
+                        <p>{{ candidate.file_name }} • {{ candidate.matched|length }} matched • {{ candidate.missing|length }} missing</p>
+                      </div>
+                      <div class="match-score">
+                        <strong>{{ candidate.score }}</strong>
+                        <span>Match</span>
+                      </div>
+                    </div>
+
+                    <details class="candidate-details">
+                      <summary>AI summary</summary>
+                      <p>{{ candidate.summary }}</p>
+
+                      <h4>Matched skills ({{ candidate.matched|length }})</h4>
+                      <div class="skill-list">
+                        {% if candidate.matched %}
+                          {% for skill in candidate.matched %}
+                            <span class="skill-tag matched-skill">{{ skill }}</span>
+                          {% endfor %}
+                        {% else %}
+                          <span class="muted">No matched required skills</span>
+                        {% endif %}
+                      </div>
+
+                      <h4>Missing skills ({{ candidate.missing|length }})</h4>
+                      <div class="skill-list">
+                        {% if candidate.missing %}
+                          {% for skill in candidate.missing %}
+                            <span class="skill-tag missing-skill">{{ skill }}</span>
+                          {% endfor %}
+                        {% else %}
+                          <span class="muted">No missing required skills</span>
+                        {% endif %}
+                      </div>
+
+                      <!-- Candidate Actions (Delete Button) -->
+                        <form action="{{ url_for('delete_candidate', job_id=selected_job['id'], candidate_id=candidate['id']) }}" method="post">
+                            <button class="btn btn-outline-danger btn-sm" type="submit">
+                                 <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                    </details>
+                  </article>
+                {% endfor %}
+              </div>
+            {% else %}
+
+              <div class="empty-dashboard compact-empty">
+                <i class="fa-solid fa-ranking-star"></i>
+                <p>No candidates scored yet. Upload resumes above to build the ranking.</p>
+              </div>
+            {% endif %}
+          </section>
+        </article>
+      </section>
+    {% else %}
+
+      <section class="dashboard-hero">
+        <div>
+          <span class="eyebrow">Recruiter Workspace</span>
+          <h1>Hiring health at a glance.</h1>
+          <p>Track open postings, candidate quality, role performance, and the latest screening activity from one recruiter dashboard.</p>
+        </div>
+        <a class="btn btn-primary" href="#job-form"><i class="fa-solid fa-plus"></i> Create Job</a>
+      </section>
+
+      <section class="kpi-ribbon" aria-label="Hiring health snapshots">
+        <article class="kpi-card">
+          <div class="kpi-icon"><i class="fa-solid fa-briefcase"></i></div>
+          <span>Open Postings</span>
+          <strong>{{ kpis.open_postings }}</strong>
+          <small>Active vacancies</small>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+          <span>Candidates Scored</span>
+          <strong>{{ kpis.candidates_scored }}</strong>
+          <small>Across all roles</small>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-icon"><i class="fa-solid fa-gauge-high"></i></div>
+          <span>Avg. Match</span>
+          <div class="gauge" style="--score: {{ kpis.average_match }};">
+            <strong>{{ kpis.average_match }}%</strong>
+          </div>
+          <small>Applicant quality</small>
+        </article>
+
+        <article class="kpi-card top-candidate-card">
+          <div class="kpi-icon"><i class="fa-solid fa-star"></i></div>
+          <span>Top Candidate{% if kpis.top_candidate.is_demo %} Sample{% endif %}</span>
+          <strong>{{ kpis.top_candidate.name }}</strong>
+          <div class="top-candidate-meta">
+            <span>Score: {{ kpis.top_candidate.score }}</span>
+            <span>{{ kpis.top_candidate.role }}</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-section">
         <div class="section-heading">
-          <span class="eyebrow">Technology Stack</span>
-          <h2>Built with practical AI recruitment tools</h2>
+          <span class="eyebrow">Management Hub</span>
+          <h2>Active Job Postings</h2>
         </div>
-        <ul class="stack-list">
-          <li><strong>Backend:</strong> Flask prototype, Python, SQLite/PostgreSQL-ready architecture.</li>
-          <li><strong>Machine Learning:</strong> spaCy, NLTK, scikit-learn, TF-IDF, cosine similarity.</li>
-          <li><strong>Document Processing:</strong> PyPDF2/pdfplumber and python-docx for resume text extraction.</li>
-          <li><strong>Frontend:</strong> Bootstrap 5, Font Awesome, and custom responsive CSS.</li>
-        </ul>
-      </div>
-      <div>
-        <div class="section-heading">
-          <span class="eyebrow">Applications</span>
-          <h2>Where the system fits</h2>
-        </div>
-        <div class="application-list">
-          <span>Corporate recruitment</span>
-          <span>Recruitment agencies</span>
-          <span>Startup hiring</span>
-          <span>Campus placements</span>
-          <span>Freelance platforms</span>
-        </div>
-      </div>
-    </section>
-    </div>
 
+        {% if jobs %}
+          <div class="posting-list">
+            {% for job in jobs %}
+              <article class="posting-card">
+                <div class="posting-main">
+                  <div class="job-card-icon"><i class="fa-solid fa-briefcase"></i></div>
+                  <div>
+                    <h3>{{ job.title }}</h3>
+                    <p>{{ job.company }}</p>
+                    <div class="skill-list">
+                      {% if job.skills %}
+                        {% for skill in job.skills %}
+                          <span class="skill-tag">{{ skill }}</span>
+                        {% endfor %}
+                      {% else %}
+                        <span class="muted">No skill tags detected</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="posting-metrics">
+                  <div>
+                    <strong>{{ job.total_candidates }}</strong>
+                    <span>Total Candidates</span>
+                  </div>
+                  <div>
+                    <strong>{{ job.top_score }}</strong>
+                    <span>Top Score</span>
+                  </div>
+                  <div>
+                    <strong>{{ job.average_score }}</strong>
+                    <span>Average Score</span>
+                  </div>
+                </div>
+
+                <div class="posting-actions">
+                  <a class="btn btn-primary" href="{{ url_for('job_detail', job_id=job.id) }}">
+                    <i class="fa-solid fa-ranking-star"></i> View/Rank
+                  </a>
+                  <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post">
+                    <button class="btn btn-outline-danger" type="submit" aria-label="Delete {{ job.title }} job posting">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-dashboard">
+            <i class="fa-solid fa-folder-open"></i>
+            <p>No active job postings yet. Create the first role below.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="activity-panel">
+        <div class="section-heading">
+          <span class="eyebrow">Recent Activity</span>
+          <h2>System Feed</h2>
+        </div>
+
+        {% if kpis.activities %}
+          <div class="activity-feed">
+            {% for activity in kpis.activities %}
+              <article class="activity-item">
+                <div class="activity-dot"></div>
+                <p>{{ activity.message }} - {{ activity.date }}{% if activity.score is not none %} - Score: {{ activity.score }}{% endif %}</p>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-dashboard">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <p>No recent activity yet. Candidate ranking events will appear here.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <section id="job-form" class="workbench job-form-panel">
+        <div class="section-heading">
+          <span class="eyebrow">Job Creation</span>
+          <h2>Save a new job posting</h2>
+        </div>
+        <form action="{{ url_for('recruiter') }}" method="post" class="upload-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="title">Job Title</label>
+              <input id="title" type="text" name="title" placeholder="Machine Learning Engineer" required>
+            </div>
+            <div class="form-group">
+              <label for="company">Company</label>
+              <input id="company" type="text" name="company" placeholder="Acme Analytics" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Job Description</label>
+            <textarea id="description" name="description" rows="8" placeholder="Paste responsibilities, skills, tools, education, and experience requirements here." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary submit-btn">
+            <i class="fa-solid fa-floppy-disk"></i> Save Job Posting
+          </button>
+        </form>
+      </section>
+    {% endif %}
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const resumeInput = document.getElementById("resumes");
+    const candidateList = document.getElementById("candidateConfirmList");
+    const candidateModalElement = document.getElementById("candidateNameModal");
+
+    function candidateNameFromFile(filename) {
+      return filename
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\b(resume|cv|profile)\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+    }
+
+    if (resumeInput && candidateList && candidateModalElement) {
+      resumeInput.addEventListener("change", () => {
+        candidateList.innerHTML = "";
+
+        Array.from(resumeInput.files).forEach((file, index) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "candidate-confirm-row";
+
+          const label = document.createElement("label");
+          label.setAttribute("for", `candidate-name-${index}`);
+          label.textContent = file.name;
+
+          const input = document.createElement("input");
+          input.id = `candidate-name-${index}`;
+          input.type = "text";
+          input.name = "candidate_names";
+          input.value = candidateNameFromFile(file.name) || file.name;
+          input.required = true;
+
+          wrapper.append(label, input);
+          candidateList.appendChild(wrapper);
+        });
+
+        if (resumeInput.files.length > 0) {
+          bootstrap.Modal.getOrCreateInstance(candidateModalElement).show();
+        }
+      });
+    }
+  </script>
 </body>
 </html>
-
-
