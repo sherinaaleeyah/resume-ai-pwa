@@ -306,30 +306,7 @@
         {% endif %}
       </section>
 
-      <section class="activity-panel">
-        <div class="section-heading">
-          <span class="eyebrow">Recent Activity</span>
-          <h2>System Feed</h2>
-        </div>
-
-        {% if kpis.activities %}
-          <div class="activity-feed">
-            {% for activity in kpis.activities %}
-              <article class="activity-item">
-                <div class="activity-dot"></div>
-                <p>{{ activity.message }} - {{ activity.date }}{% if activity.score is not none %} - Score: {{ activity.score }}{% endif %}</p>
-              </article>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-dashboard">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <p>No recent activity yet. Candidate ranking events will appear here.</p>
-          </div>
-        {% endif %}
-      </section>
-
-      <section id="job-form" class="workbench job-form-panel">
+     <section id="job-form" class="workbench job-form-panel">
         <div class="section-heading">
           <span class="eyebrow">Job Creation</span>
           <h2>Save a new job posting</h2>
@@ -356,6 +333,30 @@
           </button>
         </form>
       </section>
+
+      <section class="activity-panel">
+        <div class="section-heading">
+          <span class="eyebrow">Recent Activity</span>
+          <h2>System Feed</h2>
+        </div>
+
+        {% if kpis.activities %}
+          <div class="activity-feed">
+            {% for activity in kpis.activities %}
+              <article class="activity-item">
+                <div class="activity-dot"></div>
+                <p>{{ activity.message }} - {{ activity.date }}{% if activity.score is not none %} - Score: {{ activity.score }}{% endif %}</p>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-dashboard">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <p>No recent activity yet. Candidate ranking events will appear here.</p>
+          </div>
+        {% endif %}
+      </section>
+      
     {% endif %}
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
