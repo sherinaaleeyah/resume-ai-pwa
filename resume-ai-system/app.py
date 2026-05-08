@@ -10,6 +10,16 @@ import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+import google.generativeai as genai
+from dotenv import load_dotenv
+import time
+from google.api_core import exceptions
+
+load_dotenv()
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -146,17 +156,40 @@ def match_strength(score):
         return "Moderate match"
     return "Needs review"
 
-def candidate_summary(candidate_name, score, matched, missing):
-    strength = match_strength(score).lower()
-    matched_text = ", ".join(matched[:4]) if matched else "the available role language"
-    if missing:
-        gap_text = f" Main gaps to review: {', '.join(missing[:3])}."
-    else:
-        gap_text = " No required skills are missing from the parsed resume."
-    return (
-        f"{candidate_name} is a {strength} for this role with a {round(score)} match score. "
-        f"The resume aligns with {matched_text}.{gap_text}"
-    )
+def generate_ai_summary(candidate_name, job_title, job_description, matched, missing):
+    
+    prompt = f"""
+    Role: {job_title}
+    Target Requirements: {job_description}
+    
+    Candidate: {candidate_name}
+    Matched Skills/Experience: {", ".join(matched)}
+    Missing/Unclear Areas: {", ".join(missing)}
+
+    Task: Write a 3-4 sentence professional recruiter "assessment" summary. 
+    
+    Guidelines:
+    1. Start with a clear verdict (e.g., "[Name] is a very strong fit" or "A solid technical match").
+    2. Synthesize the matched skills into career themes (e.g., instead of saying "knows Python," say "strong technical foundation in backend automation").
+    3. Call out specific high-value areas (like Design Systems, User Research, or Prototyping).
+    4. Mention "minor uncertainties" or gaps in a nuanced way.
+    5. Avoid bullet points; use a fluid, professional narrative tone exactly like a recruiter speaking to a hiring manager.
+    """
+
+    # Inside your loop
+    try:
+            response = model.generate_content(prompt)
+            return response.text.strip()
+            
+    except exceptions.ResourceExhausted:
+            # If quota is hit, return this string instead of crashing
+            print("Quota exceeded, skipping AI summary for now.")
+            return "Summary pending (Rate limit reached). Please refresh later."
+            
+    except Exception as e:
+            # Catch other errors (like internet issues)
+            print(f"An error occurred: {e}")
+            return "Summary currently unavailable."
 
 def format_activity_date(value):
     try:
@@ -269,6 +302,17 @@ def get_job_metrics(job_id):
 
 def get_ranked_candidates(job_id):
     with get_db_connection() as conn:
+        # 1. Fetch Job Details first so the AI has context
+        job = conn.execute(
+            "SELECT title, description FROM jobs WHERE id = ?", 
+            (job_id,)
+        ).fetchone()
+        
+        # Fallback if job is missing
+        job_title = job["title"] if job else "Unknown Position"
+        job_desc = job["description"] if job else ""
+
+        # 2. Fetch Candidate Scores
         rows = conn.execute(
             """
             SELECT id, candidate_name, file_name, score, matched_skills, missing_skills, summary
@@ -283,6 +327,18 @@ def get_ranked_candidates(job_id):
     for row in rows:
         matched = json.loads(row["matched_skills"] or "[]")
         missing = json.loads(row["missing_skills"] or "[]")
+        
+        # 3. Update the function call to include all 5 arguments
+        summary = row["summary"]
+        if not summary:
+            summary = generate_ai_summary(
+                candidate_name=row["candidate_name"],
+                job_title=job_title,
+                job_description=job_desc,
+                matched=matched,
+                missing=missing
+            )
+
         candidates.append({
             "id": row["id"],
             "candidate_name": row["candidate_name"],
@@ -290,7 +346,7 @@ def get_ranked_candidates(job_id):
             "score": round(row["score"]),
             "matched": matched,
             "missing": missing,
-            "summary": row["summary"] or candidate_summary(row["candidate_name"], row["score"], matched, missing),
+            "summary": summary,
             "strength": match_strength(row["score"]),
         })
     return candidates
@@ -506,12 +562,17 @@ def rank_job_resumes(job_id):
     if job is None:
         abort(404)
 
+    # 1. ALIGN VARIABLE NAMES
+    # We extract these here so they are available for generate_ai_summary
+    job_title = job["title"] 
     job_description = job["description"]
+    
     required_skills = extract_required_skills(job_description)
     submitted_names = [name.strip() for name in request.form.getlist("candidate_names")]
 
     results = []
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
+    
     for index, file in enumerate(request.files.getlist("resumes")):
         filename = file.filename.lower()
         if filename.endswith(".pdf"):
@@ -522,8 +583,20 @@ def rank_job_resumes(job_id):
             continue
 
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
+        
+        # Determine candidate name
         candidate_name = submitted_names[index] if index < len(submitted_names) and submitted_names[index] else candidate_name_from_filename(file.filename)
-        summary = candidate_summary(candidate_name, score, matched, missing)
+        
+        # 2. UPDATED FUNCTION CALL
+        # Note: We use job_description (the variable we created above)
+        summary = generate_ai_summary(
+            candidate_name=candidate_name, 
+            job_title=job_title, 
+            job_description=job_description, 
+            matched=matched, 
+            missing=missing
+        )
+
         results.append({
             "candidate": file.filename,
             "candidate_name": candidate_name,
@@ -535,12 +608,13 @@ def rank_job_resumes(job_id):
         })
 
     results.sort(key=lambda x: x["score"], reverse=True)
+    
     if results:
         with get_db_connection() as conn:
             for result in results:
                 conn.execute(
                     """
-                    INSERT INTO candidate_scores
+                    INSERT INTO candidate_scores 
                         (job_id, candidate_name, file_name, score, matched_skills, missing_skills, summary, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
@@ -559,11 +633,12 @@ def rank_job_resumes(job_id):
                     "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
                     (
                         job_id,
-                        f"{result['candidate_name']} added to {job['title']}",
+                        f"{result['candidate_name']} added to {job_title}",
                         result["score"],
                         timestamp,
                     ),
                 )
+            conn.commit() # Don't forget to commit your changes!
 
     return render_template(
         "result.html",

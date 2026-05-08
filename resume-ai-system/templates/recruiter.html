@@ -134,6 +134,7 @@
             {% if ranked_candidates %}
               <div class="ranked-candidate-list">
                 {% for candidate in ranked_candidates %}
+                
                   <article class="ranked-candidate-card">
                     <div class="ranked-candidate-main">
                       <div>
@@ -173,13 +174,15 @@
                           <span class="muted">No missing required skills</span>
                         {% endif %}
                       </div>
-
+                    
+                      <div class="card-footer-actions">
                       <!-- Candidate Actions (Delete Button) -->
                         <form action="{{ url_for('delete_candidate', job_id=selected_job['id'], candidate_id=candidate['id']) }}" method="post">
                             <button class="btn btn-outline-danger btn-sm" type="submit">
                                  <i class="fa-solid fa-trash"></i>
                             </button>
                         </form>
+                        </div>
                     </details>
                   </article>
                 {% endfor %}

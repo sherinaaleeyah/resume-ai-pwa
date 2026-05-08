@@ -553,11 +553,41 @@ textarea {
     gap: 14px;
 }
 
+/* Ensure the card is a column layout */
 .ranked-candidate-card {
-    background: #f7fafc;
-    border: 1px solid #e0e8ef;
-    border-radius: 8px;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 1.5rem;
+    border: 1px solid #eee;
+    margin-bottom: 1rem;
+    background: white;
+}
+
+/* This container stretches the full width and pushes the button right */
+.card-footer-actions {
+    display: flex;
+    width: 100%;
+    margin-top: 10px; /* Space between details and button */
+}
+
+.card-footer-actions form {
+    margin-left: auto; /* THIS pushes the trash icon to the far right */
+}
+
+.btn-trash-bottom {
+    background: transparent;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-trash-bottom:hover {
+    background-color: #dc3545;
+    color: white;
 }
 
 .ranked-candidate-main {
