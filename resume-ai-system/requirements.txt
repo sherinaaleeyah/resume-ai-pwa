@@ -3,4 +3,6 @@ pdfplumber
 python-docx
 spacy
 scikit-learn
+google-generativeai
+python-dotenv
 gunicorn
