@@ -221,3 +221,4 @@ uploads/
 
 .DS_Store
 .env
+*.db

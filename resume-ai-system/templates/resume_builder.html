@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS Resume Builder - Resume AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+</head>
+
+<body>
+
+  <nav class="navbar navbar-expand-lg app-nav">
+    <div class="container-fluid dashboard-shell">
+      <span class="navbar-brand">
+        <i class="fa-solid fa-file-pen"></i> ATS Resume Builder
+      </span>
+      <a href="/job_seeker" class="btn btn-outline-light btn-sm">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
+    </div>
+  </nav>
+
+  <main class="dashboard-shell">
+
+    <section class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Resume Builder</span>
+        <h1>Build an ATS-friendly resume from scratch.</h1>
+        <p>
+          Fill in your details using standard resume sections. The system will generate
+          a clean resume preview and can enhance your professional summary using AI.
+        </p>
+      </div>
+    </section>
+
+    <section class="workbench">
+      <div class="section-heading">
+        <span class="eyebrow">Resume Details</span>
+        <h2>Enter Your Information</h2>
+      </div>
+
+      <form action="/generate_resume" method="post" class="upload-form">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="full_name">Full Name</label>
+            <input 
+              type="text" 
+              id="full_name" 
+              name="full_name" 
+              placeholder="John Smith" 
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              placeholder="example@email.com" 
+              required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input 
+              type="text" 
+              id="phone" 
+              name="phone" 
+              placeholder="012-3456789">
+          </div>
+
+          <div class="form-group">
+            <label for="location">Location</label>
+            <input 
+              type="text" 
+              id="location" 
+              name="location" 
+              placeholder="Kuala Lumpur, Malaysia">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="target_role">Target Role</label>
+          <input 
+            type="text" 
+            id="target_role" 
+            name="target_role" 
+            placeholder="Example: Data Analyst Intern, Software Engineer, HR Executive">
+        </div>
+
+        <div class="form-group">
+          <label for="summary">Professional Summary</label>
+          <textarea 
+            id="summary" 
+            name="summary" 
+            rows="5" 
+            placeholder="Write a short summary about your background, skills, and career goal. AI will improve this later."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="education">Education</label>
+          <textarea 
+            id="education" 
+            name="education" 
+            rows="5" 
+            placeholder="Example: Bachelor of Computer Science, International Islamic University Malaysia, 2022–Present"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="experience">Work Experience</label>
+          <textarea 
+            id="experience" 
+            name="experience" 
+            rows="6" 
+            placeholder="Example: Job title, company name, duration, responsibilities, achievements"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="skills">Skills</label>
+          <textarea 
+            id="skills" 
+            name="skills" 
+            rows="4" 
+            placeholder="Example: Python, SQL, Machine Learning, Data Analysis, Communication"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="projects">Projects</label>
+          <textarea 
+            id="projects" 
+            name="projects" 
+            rows="5" 
+            placeholder="Example: Project title, tools used, short description, outcome"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="certifications">Certifications</label>
+          <textarea 
+            id="certifications" 
+            name="certifications" 
+            rows="4" 
+            placeholder="Example: Google Data Analytics Certificate, Coursera, 2025"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary submit-btn">
+          <i class="fa-solid fa-eye"></i> Generate Resume Preview
+        </button>
+
+      </form>
+    </section>
+
+  </main>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js");
+      });
+    }
+  </script>
+
+</body>
+</html>

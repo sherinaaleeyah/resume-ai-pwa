@@ -1511,3 +1511,41 @@ textarea {
     }
 }
 
+/* ========== JOB SEEKER DASHBOARD CARDS ========== */
+
+.job-seeker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 24px;
+    width: 100%;
+    margin: 28px 0;
+}
+
+.job-seeker-grid article {
+    background: #fff;
+    border: 1px solid #dce5ec;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(24, 38, 55, 0.08);
+    padding: 28px;
+    width: 100%;
+}
+
+.job-seeker-grid article p {
+    color: #5d6b7a;
+}
+
+.job-seeker-grid .upload-form {
+    width: 100%;
+}
+
+.job-seeker-grid textarea,
+.job-seeker-grid input[type="file"] {
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .job-seeker-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

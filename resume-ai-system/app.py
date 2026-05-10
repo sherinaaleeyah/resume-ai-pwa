@@ -730,6 +730,10 @@ def rank_job_resumes(job_id):
 def job_seeker():
     return render_template("job_seeker.html")
 
+@app.route("/resume_builder")
+def resume_builder():
+    return render_template("resume_builder.html")
+
 @app.route("/analyze_job_seeker_resume", methods=["POST"])
 def analyze_job_seeker_resume():
     job_description = request.form.get("job_description", "").strip()
@@ -781,6 +785,62 @@ def analyze_job_seeker_resume():
         ai_feedback=ai_feedback
     )
 
+def generate_ai_resume_summary(resume_data):
+    prompt = f"""
+    You are an AI resume writing assistant.
+
+    Candidate Information:
+    Name: {resume_data.get("full_name")}
+    Target Role: {resume_data.get("target_role")}
+    Current Summary: {resume_data.get("summary")}
+    Education: {resume_data.get("education")}
+    Experience: {resume_data.get("experience")}
+    Skills: {resume_data.get("skills")}
+    Projects: {resume_data.get("projects")}
+    Certifications: {resume_data.get("certifications")}
+
+    Task:
+    Rewrite the professional summary into an ATS-friendly resume summary.
+
+    Requirements:
+    1. Keep it concise, around 3-4 sentences.
+    2. Use professional language.
+    3. Highlight relevant skills, education, projects, or experience.
+    4. Do not invent fake experience, fake skills, or fake certifications.
+    5. Make it suitable for the target role.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+
+    except exceptions.ResourceExhausted:
+        return resume_data.get("summary", "")
+
+    except Exception as e:
+        print(f"AI resume summary error: {e}")
+        return resume_data.get("summary", "")
+
+@app.route("/generate_resume", methods=["POST"])
+def generate_resume():
+    resume_data = {
+        "full_name": request.form.get("full_name", ""),
+        "email": request.form.get("email", ""),
+        "phone": request.form.get("phone", ""),
+        "location": request.form.get("location", ""),
+        "target_role": request.form.get("target_role", ""),
+        "summary": request.form.get("summary", ""),
+        "education": request.form.get("education", ""),
+        "experience": request.form.get("experience", ""),
+        "skills": request.form.get("skills", ""),
+        "projects": request.form.get("projects", ""),
+        "certifications": request.form.get("certifications", "")
+    }
+
+    ai_summary = generate_ai_resume_summary(resume_data)
+    resume_data["ai_summary"] = ai_summary
+
+    return render_template("resume_preview.html", resume=resume_data)
 
 @app.route("/service-worker.js")
 def service_worker():

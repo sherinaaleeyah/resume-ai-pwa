@@ -4,5 +4,6 @@ python-docx
 spacy
 scikit-learn
 google-generativeai
+google-api-core
 python-dotenv
 gunicorn
