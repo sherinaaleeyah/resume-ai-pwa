@@ -31,60 +31,308 @@ try:
 except OSError:
     nlp = None
 
-# Regex patterns for common technical skills
+# Comprehensive technical skill regex patterns
 TECH_PATTERNS = [
-    # Programming & Tech
+
+    # =========================
+    # Programming Languages
+    # =========================
     r'\bc\b', r'\bc\+\+\b', r'\bc#\b',
-    r'\bpython\b', r'\bsql\b', r'\bjava\b',
-    r'\bjavascript\b', r'\btypescript\b', r'\bruby\b',
-    r'\bgo\b', r'\brust\b', r'\bswift\b', r'\bkotlin\b', r'\bphp\b',
+    r'\bpython\b', r'\bjava\b',
+    r'\bjavascript\b', r'\btypescript\b',
+    r'\bruby\b', r'\bgo\b', r'\brust\b',
+    r'\bswift\b', r'\bkotlin\b',
+    r'\bphp\b', r'\bperl\b',
+    r'\br\b', r'\bmatlab\b',
+    r'\bscala\b', r'\bdart\b',
+    r'\bsql\b', r'\bnosql\b',
 
-    # Frameworks & Libraries
-    r'\btensorflow\b', r'\bpytorch\b', r'\bkeras\b', r'\bsklearn\b',
-    r'\bpandas\b', r'\bnumpy\b', r'\bflask\b', r'\bdjango\b',
-    r'\breact\b', r'\bangular\b', r'\bvue\b',
+    # =========================
+    # Web Development
+    # =========================
+    r'\bhtml\b', r'\bhtml5\b',
+    r'\bcss\b', r'\bcss3\b',
+    r'\bsass\b', r'\bscss\b',
+    r'\bbootstrap\b', r'\btailwind\b',
+    r'\bmaterial ui\b', r'\bchakra ui\b',
 
-    # Cloud & DevOps
-    r'\baws\b', r'\bazure\b', r'\bgcp\b', r'\bdocker\b',
-    r'\bkubernetes\b', r'\bjenkins\b', r'\bgit\b', r'\blinux\b',
+    r'\breact\b', r'\breact\.?js\b',
+    r'\bnext\.?js\b',
+    r'\bangular\b',
+    r'\bvue\b', r'\bvue\.?js\b',
+    r'\bnuxt\.?js\b',
+    r'\bsvelte\b',
+    r'\bjquery\b',
+    r'\bredux\b',
 
-    # Data & Analytics
-    r'\btableau\b', r'\bpower bi\b', r'\bexcel\b',
-    r'\bhadoop\b', r'\bspark\b', r'\bmachine learning\b',
-    r'\bdata science\b', r'\bnatural language processing\b',
+    r'\bnode\.?js\b',
+    r'\bexpress\.?js\b',
+    r'\bnest\.?js\b',
+    r'\bfastapi\b',
+    r'\bflask\b',
+    r'\bdjango\b',
+    r'\blaravel\b',
+    r'\bspring boot\b',
 
-    # Productivity & Office Tools
-    r'\bmicrosoft office\b', r'\bmicrosoft word\b',
-    r'\bmicrosoft excel\b', r'\bmicrosoft powerpoint\b',
-    r'\bmicrosoft access\b', r'\bmicrosoft project\b',
-    r'\bmicrosoft visio\b', r'\bgoogle docs\b',
+    r'\brest api\b',
+    r'\bgraphql\b',
+    r'\bjson\b',
+    r'\bxml\b',
 
-    # Engineering & CAD Software
-    r'\bautocad\b', r'\bsolidworks\b', r'\bcatia\b',
-    r'\bansys\b', r'\bmatlab\b', r'\bsimulink\b',
-    r'\bcreo\b', r'\binventor\b', r'\brevit\b', r'\barchicad\b',
+    # =========================
+    # Mobile Development
+    # =========================
+    r'\bflutter\b',
+    r'\breact native\b',
+    r'\bandroid studio\b',
+    r'\bxcode\b',
+    r'\bionic\b',
+    r'\bxamarin\b',
 
-    # Business & Finance Software
-    r'\bsap\b', r'\boracle financials\b', r'\bquickbooks\b',
-    r'\bpeachtree\b', r'\bzoho books\b',
+    # =========================
+    # Databases
+    # =========================
+    r'\bmysql\b',
+    r'\bpostgresql\b',
+    r'\bmongodb\b',
+    r'\bsqlite\b',
+    r'\boracle\b',
+    r'\bredis\b',
+    r'\bcassandra\b',
+    r'\bmariadb\b',
+    r'\belasticsearch\b',
+    r'\bfirebase\b',
+    r'\bsupabase\b',
 
-    # Statistics & Research Tools
-    r'\bstata\b', r'\bspss\b', r'\brapidminer\b',
-    r'\bsas\b', r'\br\b',
+    # =========================
+    # AI / Machine Learning
+    # =========================
+    r'\bmachine learning\b',
+    r'\bdeep learning\b',
+    r'\bdata science\b',
+    r'\bnatural language processing\b',
+    r'\bnlp\b',
+    r'\bcomputer vision\b',
+    r'\bneural network\b',
+    r'\bcnn\b',
+    r'\brnn\b',
+    r'\blstm\b',
+    r'\btransformer\b',
+    r'\byolo\b',
 
-    # Design & Creative Software
-    r'\badobe photoshop\b', r'\badobe illustrator\b',
-    r'\badobe indesign\b', r'\badobe xd\b',
-    r'\bfigma\b', r'\bsketch\b', r'\bcoreldraw\b',
-    r'\bblender\b', r'\bmaya\b',
+    r'\btensorflow\b',
+    r'\bpytorch\b',
+    r'\bkeras\b',
+    r'\bscikit[- ]learn\b',
+    r'\bsklearn\b',
+    r'\bpandas\b',
+    r'\bnumpy\b',
+    r'\bopencv\b',
+    r'\bhugging face\b',
+    r'\blangchain\b',
+    r'\bopenai\b',
+    r'\bchatgpt\b',
+    r'\bllm\b',
 
-    # Project & Collaboration Tools
-    r'\bjira\b', r'\bconfluence\b', r'\btrello\b',
-    r'\basana\b', r'\bslack\b', r'\bnotion\b',
+    # =========================
+    # Cloud / DevOps
+    # =========================
+    r'\baws\b',
+    r'\bazure\b',
+    r'\bgcp\b',
+    r'\bdocker\b',
+    r'\bkubernetes\b',
+    r'\bterraform\b',
+    r'\bansible\b',
+    r'\bjenkins\b',
+    r'\bgithub actions\b',
+    r'\bgitlab ci\b',
+    r'\bcircleci\b',
+    r'\btravis ci\b',
+    r'\bvagrant\b',
+    r'\bhelm\b',
 
-    # Specialized Fields
-    r'\bepic systems\b', r'\bmeditech\b'   # healthcare IT
+    r'\bgit\b',
+    r'\bgithub\b',
+    r'\bbitbucket\b',
+
+    # =========================
+    # Operating Systems
+    # =========================
+    r'\blinux\b',
+    r'\bubuntu\b',
+    r'\bunix\b',
+    r'\bwindows server\b',
+    r'\bmacos\b',
+
+    # =========================
+    # Cybersecurity
+    # =========================
+    r'\bkali linux\b',
+    r'\bwireshark\b',
+    r'\bnmap\b',
+    r'\bmetasploit\b',
+    r'\bburp suite\b',
+    r'\bnessus\b',
+    r'\bsplunk\b',
+    r'\bsiem\b',
+
+    r'\bethical hacking\b',
+    r'\bpenetration testing\b',
+    r'\bnetwork security\b',
+    r'\bcybersecurity\b',
+    r'\bfirewall\b',
+    r'\bincident response\b',
+    r'\bdigital forensics\b',
+
+    # =========================
+    # Networking
+    # =========================
+    r'\bnetworking\b',
+    r'\btcp/ip\b',
+    r'\bosi model\b',
+    r'\brouter\b',
+    r'\bswitch\b',
+    r'\bcisco\b',
+    r'\bpacket tracer\b',
+
+    # =========================
+    # Data Engineering / Big Data
+    # =========================
+    r'\bhadoop\b',
+    r'\bspark\b',
+    r'\bkafka\b',
+    r'\bairflow\b',
+    r'\betl\b',
+    r'\bdata warehouse\b',
+    r'\bsnowflake\b',
+    r'\bdatabricks\b',
+
+    # =========================
+    # Data Analytics / BI
+    # =========================
+    r'\btableau\b',
+    r'\bpower\s?bi\b',
+    r'\bexcel\b',
+    r'\bgoogle sheets\b',
+
+    # =========================
+    # Testing / QA
+    # =========================
+    r'\bselenium\b',
+    r'\bcypress\b',
+    r'\bjest\b',
+    r'\bmocha\b',
+    r'\bpytest\b',
+    r'\bunit testing\b',
+    r'\bautomation testing\b',
+
+    # =========================
+    # UI/UX & Creative Design
+    # =========================
+    r'\bfigma\b',
+    r'\bsketch\b',
+    r'\badobe xd\b',
+    r'\bwireframing\b',
+    r'\bprototyping\b',
+
+    r'\badobe photoshop\b',
+    r'\badobe illustrator\b',
+    r'\badobe indesign\b',
+    r'\badobe premiere\b',
+    r'\bafter effects\b',
+    r'\bcanva\b',
+    r'\bcoreldraw\b',
+    r'\bblender\b',
+    r'\bmaya\b',
+
+    # =========================
+    # Engineering / CAD
+    # =========================
+    r'\bautocad\b',
+    r'\bsolidworks\b',
+    r'\bcatia\b',
+    r'\bansys\b',
+    r'\bsimulink\b',
+    r'\bcreo\b',
+    r'\binventor\b',
+    r'\brevit\b',
+    r'\barchicad\b',
+
+    # =========================
+    # Business / Finance / ERP
+    # =========================
+    r'\bsap\b',
+    r'\boracle financials\b',
+    r'\bquickbooks\b',
+    r'\bzoho books\b',
+    r'\bsalesforce\b',
+    r'\bhubspot\b',
+    r'\bcrm\b',
+    r'\berp\b',
+    r'\bservicenow\b',
+
+    # =========================
+    # Statistics / Research
+    # =========================
+    r'\bstata\b',
+    r'\bspss\b',
+    r'\bsas\b',
+    r'\brapidminer\b',
+
+    # =========================
+    # Healthcare IT
+    # =========================
+    r'\bepic systems\b',
+    r'\bmeditech\b',
+    r'\belectronic medical records\b',
+    r'\bemr\b',
+
+    # =========================
+    # Project Management
+    # =========================
+    r'\bjira\b',
+    r'\bconfluence\b',
+    r'\btrello\b',
+    r'\basana\b',
+    r'\bslack\b',
+    r'\bnotion\b',
+    r'\bmonday\.com\b',
+    r'\bclickup\b',
+    r'\bmiro\b',
+    r'\bzoom\b',
+    r'\bmicrosoft teams\b',
+
+    # =========================
+    # Game Development
+    # =========================
+    r'\bunity\b',
+    r'\bunreal engine\b',
+    r'\bgodot\b',
+
+    # =========================
+    # IoT / Embedded Systems
+    # =========================
+    r'\barduino\b',
+    r'\braspberry pi\b',
+    r'\besp32\b',
+    r'\bembedded systems\b',
+
+    # =========================
+    # General Technical Concepts
+    # =========================
+    r'\boop\b',
+    r'\bobject oriented programming\b',
+    r'\bdata structures\b',
+    r'\balgorithms\b',
+    r'\bsoftware engineering\b',
+    r'\bsdlc\b',
+    r'\bagile\b',
+    r'\bscrum\b',
+    r'\bapi development\b',
+    r'\bmicroservices\b'
 ]
+
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
