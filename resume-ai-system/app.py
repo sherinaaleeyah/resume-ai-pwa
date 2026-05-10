@@ -1,4 +1,5 @@
-from flask import Flask, abort, redirect, request, render_template, send_from_directory, url_for
+from flask import Flask, abort, redirect, request, render_template, send_from_directory, url_for, send_file
+from io import BytesIO
 import pdfplumber
 import docx
 import re
@@ -726,6 +727,151 @@ def calculate_combined_score(resume_text, job_description, required_skills):
 
     return round(combined_score, 2), matched, missing
 
+def safe_json_loads(value):
+    try:
+        return json.loads(value) if value else []
+    except json.JSONDecodeError:
+        return []
+
+
+def format_list(items, key):
+    values = []
+    for item in items:
+        text = item.get(key, "").strip()
+        if text:
+            values.append(text)
+    return values
+
+
+def build_resume_text_from_builder(resume_data):
+    resume_parts = []
+
+    resume_parts.append(resume_data.get("summary", ""))
+
+    for skill in resume_data.get("skills", []):
+        resume_parts.append(skill)
+
+    for exp in resume_data.get("experiences", []):
+        resume_parts.append(exp.get("role", ""))
+        resume_parts.append(exp.get("company", ""))
+        resume_parts.append(exp.get("description", ""))
+
+    for edu in resume_data.get("educations", []):
+        resume_parts.append(edu.get("school", ""))
+        resume_parts.append(edu.get("degree", ""))
+
+    for project in resume_data.get("projects", []):
+        resume_parts.append(project.get("title", ""))
+        resume_parts.append(project.get("description", ""))
+        resume_parts.append(project.get("tools", ""))
+
+    for cert in resume_data.get("certifications", []):
+        resume_parts.append(cert.get("name", ""))
+        resume_parts.append(cert.get("provider", ""))
+
+    return " ".join(resume_parts).lower()
+
+
+def generate_ai_bullet_points(experience):
+    prompt = f"""
+    You are an AI resume writing assistant.
+
+    Convert the following work experience into 3 professional resume bullet points.
+
+    Company: {experience.get("company")}
+    Role: {experience.get("role")}
+    Period: {experience.get("period")}
+    What the candidate did:
+    {experience.get("description")}
+
+    Requirements:
+    1. Use strong action verbs.
+    2. Make the bullets suitable for an ATS-friendly resume.
+    3. Do not invent fake achievements or numbers.
+    4. Keep each bullet concise.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"AI bullet generation error: {e}")
+        return experience.get("description", "")
+
+
+def generate_ai_resume_summary(resume_data):
+    prompt = f"""
+    You are an AI resume writing assistant.
+
+    Candidate Information:
+    Name: {resume_data.get("full_name")}
+    Target Role: {resume_data.get("target_role")}
+    Current Summary: {resume_data.get("summary")}
+    Skills: {", ".join(resume_data.get("skills", []))}
+    Experience: {resume_data.get("experience_text")}
+    Education: {resume_data.get("education_text")}
+    Projects: {resume_data.get("project_text")}
+    Certifications: {resume_data.get("certification_text")}
+
+    Task:
+    Rewrite the professional summary into an ATS-friendly resume summary.
+
+    Requirements:
+    1. Keep it around 2-3 sentences.
+    2. Use professional language.
+    3. Highlight relevant skills, education, projects, or experience.
+    4. Do not invent fake experience, fake skills, or fake certifications.
+    5. Make it suitable for the target role.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"AI resume summary error: {e}")
+        return resume_data.get("summary", "")
+
+
+def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_role):
+    missing_sections = [
+        item["section"] for item in ats_feedback if item["status"] == "Missing"
+    ]
+
+    prompt = f"""
+    You are an AI resume advisor.
+
+    Target Role: {target_role}
+    Resume Score: {score}%
+
+    Matched Skills:
+    {", ".join(matched) if matched else "No strong matched skills detected."}
+
+    Missing Skills:
+    {", ".join(missing) if missing else "No major missing skills detected."}
+
+    Missing ATS Sections:
+    {", ".join(missing_sections) if missing_sections else "No major missing sections detected."}
+
+    Task:
+    Give a clear explanation of the resume score and suggest what the job seeker should improve.
+
+    Requirements:
+    1. Explain what the score means.
+    2. Mention strengths.
+    3. Mention missing skills or skill gaps.
+    4. Mention ATS structure issues if any.
+    5. Give practical improvement suggestions.
+    6. Use a helpful and honest tone.
+    7. Write in 2 short paragraphs.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"AI builder feedback error: {e}")
+        return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
+
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -1033,6 +1179,110 @@ def analyze_job_seeker_resume():
         ai_feedback=ai_feedback
     )
 
+@app.route("/download_resume_docx", methods=["POST"])
+def download_resume_docx():
+    full_name = request.form.get("full_name", "Resume")
+    email = request.form.get("email", "")
+    phone = request.form.get("phone", "")
+    location = request.form.get("location", "")
+    target_role = request.form.get("target_role", "")
+
+    summary = request.form.get("summary", "")
+    skills = request.form.get("skills", "")
+    experience = request.form.get("experience", "")
+    education = request.form.get("education", "")
+    projects = request.form.get("projects", "")
+    certifications = request.form.get("certifications", "")
+
+    document = docx.Document()
+
+    document.add_heading(full_name, level=0)
+
+    contact_line = " | ".join(
+        item for item in [email, phone, location] if item
+    )
+    if contact_line:
+        document.add_paragraph(contact_line)
+
+    if target_role:
+        document.add_paragraph(f"Target Role: {target_role}")
+
+    if summary:
+        document.add_heading("Professional Summary", level=1)
+        document.add_paragraph(summary)
+
+    if skills:
+        document.add_heading("Skills", level=1)
+        document.add_paragraph(skills)
+
+    if experience:
+        document.add_heading("Work Experience", level=1)
+        document.add_paragraph(experience)
+
+    if education:
+        document.add_heading("Education", level=1)
+        document.add_paragraph(education)
+
+    if projects:
+        document.add_heading("Projects", level=1)
+        document.add_paragraph(projects)
+
+    if certifications:
+        document.add_heading("Certifications", level=1)
+        document.add_paragraph(certifications)
+
+    file_stream = BytesIO()
+    document.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"{full_name.replace(' ', '_')}_Resume.docx"
+
+    return send_file(
+        file_stream,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+def safe_json_loads(value):
+    try:
+        return json.loads(value) if value else []
+    except json.JSONDecodeError:
+        return []
+
+def build_resume_text_from_builder(resume_data):
+    resume_parts = []
+
+    resume_parts.append(resume_data.get("summary", ""))
+    resume_parts.append(resume_data.get("ai_summary", ""))
+
+    for skill in resume_data.get("skills", []):
+        resume_parts.append(skill)
+
+    for exp in resume_data.get("experiences", []):
+        resume_parts.append(exp.get("company", ""))
+        resume_parts.append(exp.get("role", ""))
+        resume_parts.append(exp.get("period", ""))
+        resume_parts.append(exp.get("description", ""))
+        resume_parts.append(exp.get("ai_bullets", ""))
+
+    for edu in resume_data.get("educations", []):
+        resume_parts.append(edu.get("school", ""))
+        resume_parts.append(edu.get("degree", ""))
+        resume_parts.append(edu.get("period", ""))
+
+    for project in resume_data.get("projects", []):
+        resume_parts.append(project.get("title", ""))
+        resume_parts.append(project.get("tools", ""))
+        resume_parts.append(project.get("description", ""))
+
+    for cert in resume_data.get("certifications", []):
+        resume_parts.append(cert.get("name", ""))
+        resume_parts.append(cert.get("provider", ""))
+        resume_parts.append(cert.get("year", ""))
+
+    return " ".join(resume_parts).lower()
+
 def generate_ai_resume_summary(resume_data):
     prompt = f"""
     You are an AI resume writing assistant.
@@ -1041,17 +1291,17 @@ def generate_ai_resume_summary(resume_data):
     Name: {resume_data.get("full_name")}
     Target Role: {resume_data.get("target_role")}
     Current Summary: {resume_data.get("summary")}
-    Education: {resume_data.get("education")}
-    Experience: {resume_data.get("experience")}
-    Skills: {resume_data.get("skills")}
-    Projects: {resume_data.get("projects")}
-    Certifications: {resume_data.get("certifications")}
+    Skills: {", ".join(resume_data.get("skills", []))}
+    Experience: {resume_data.get("experience_text")}
+    Education: {resume_data.get("education_text")}
+    Projects: {resume_data.get("project_text")}
+    Certifications: {resume_data.get("certification_text")}
 
     Task:
     Rewrite the professional summary into an ATS-friendly resume summary.
 
     Requirements:
-    1. Keep it concise, around 3-4 sentences.
+    1. Keep it around 2-3 sentences.
     2. Use professional language.
     3. Highlight relevant skills, education, projects, or experience.
     4. Do not invent fake experience, fake skills, or fake certifications.
@@ -1068,27 +1318,182 @@ def generate_ai_resume_summary(resume_data):
     except Exception as e:
         print(f"AI resume summary error: {e}")
         return resume_data.get("summary", "")
+    
+def generate_ai_bullet_points(experience):
+    prompt = f"""
+    You are an AI resume writing assistant.
+
+    Convert the following work experience into 3 professional resume bullet points.
+
+    Company: {experience.get("company")}
+    Role: {experience.get("role")}
+    Period: {experience.get("period")}
+    What the candidate did:
+    {experience.get("description")}
+
+    Requirements:
+    1. Use strong action verbs.
+    2. Make the bullets suitable for an ATS-friendly resume.
+    3. Do not invent fake achievements or numbers.
+    4. Keep each bullet concise.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+
+    except exceptions.ResourceExhausted:
+        return experience.get("description", "")
+
+    except Exception as e:
+        print(f"AI bullet generation error: {e}")
+        return experience.get("description", "")
+
+def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_role):
+    missing_sections = [
+        item["section"] for item in ats_feedback if item["status"] == "Missing"
+    ]
+
+    prompt = f"""
+    You are an AI resume advisor.
+
+    Target Role: {target_role}
+    Resume Score: {score}%
+
+    Matched Skills:
+    {", ".join(matched) if matched else "No strong matched skills detected."}
+
+    Missing Skills:
+    {", ".join(missing) if missing else "No major missing skills detected."}
+
+    Missing ATS Sections:
+    {", ".join(missing_sections) if missing_sections else "No major missing sections detected."}
+
+    Task:
+    Give a clear explanation of the resume score and suggest what the job seeker should improve.
+
+    Requirements:
+    1. Explain what the score means.
+    2. Mention strengths.
+    3. Mention missing skills or skill gaps.
+    4. Mention ATS structure issues if any.
+    5. Give practical improvement suggestions.
+    6. Use a helpful and honest tone.
+    7. Write in 2 short paragraphs.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+
+    except exceptions.ResourceExhausted:
+        return "AI feedback is temporarily unavailable due to usage limits. Please review the matched skills, missing skills, and ATS structure feedback."
+
+    except Exception as e:
+        print(f"AI builder feedback error: {e}")
+        return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
 
 @app.route("/generate_resume", methods=["POST"])
 def generate_resume():
+    skills = safe_json_loads(request.form.get("skills_json"))
+    experiences = safe_json_loads(request.form.get("experiences_json"))
+    educations = safe_json_loads(request.form.get("educations_json"))
+    projects = safe_json_loads(request.form.get("projects_json"))
+    certifications = safe_json_loads(request.form.get("certifications_json"))
+
     resume_data = {
-        "full_name": request.form.get("full_name", ""),
-        "email": request.form.get("email", ""),
-        "phone": request.form.get("phone", ""),
-        "location": request.form.get("location", ""),
-        "target_role": request.form.get("target_role", ""),
-        "summary": request.form.get("summary", ""),
-        "education": request.form.get("education", ""),
-        "experience": request.form.get("experience", ""),
-        "skills": request.form.get("skills", ""),
-        "projects": request.form.get("projects", ""),
-        "certifications": request.form.get("certifications", "")
+        "full_name": request.form.get("full_name", "").strip(),
+        "email": request.form.get("email", "").strip(),
+        "phone": request.form.get("phone", "").strip(),
+        "location": request.form.get("location", "").strip(),
+        "target_role": request.form.get("target_role", "").strip(),
+        "target_job_description": request.form.get("target_job_description", "").strip(),
+        "summary": request.form.get("summary", "").strip(),
+        "skills": skills,
+        "experiences": experiences,
+        "educations": educations,
+        "projects": projects,
+        "certifications": certifications
     }
+
+    enhanced_experiences = []
+
+    for exp in experiences:
+        ai_bullets = generate_ai_bullet_points(exp)
+        exp["ai_bullets"] = ai_bullets
+        enhanced_experiences.append(exp)
+
+    resume_data["experiences"] = enhanced_experiences
+
+    resume_data["experience_text"] = "\n\n".join(
+        [
+            f"{exp.get('role', '')} at {exp.get('company', '')} ({exp.get('period', '')})\n{exp.get('ai_bullets', '')}"
+            for exp in enhanced_experiences
+        ]
+    )
+
+    resume_data["education_text"] = "\n".join(
+        [
+            f"{edu.get('degree', '')}, {edu.get('school', '')} ({edu.get('period', '')})"
+            for edu in educations
+        ]
+    )
+
+    resume_data["project_text"] = "\n\n".join(
+        [
+            f"{project.get('title', '')}\nTools: {project.get('tools', '')}\n{project.get('description', '')}"
+            for project in projects
+        ]
+    )
+
+    resume_data["certification_text"] = "\n".join(
+        [
+            f"{cert.get('name', '')}, {cert.get('provider', '')} ({cert.get('year', '')})"
+            for cert in certifications
+        ]
+    )
 
     ai_summary = generate_ai_resume_summary(resume_data)
     resume_data["ai_summary"] = ai_summary
 
-    return render_template("resume_preview.html", resume=resume_data)
+    resume_text = build_resume_text_from_builder(resume_data)
+
+    target_job_description = resume_data.get("target_job_description", "")
+
+    if target_job_description:
+        required_skills = extract_required_skills(target_job_description)
+
+        score, matched, missing = calculate_combined_score(
+            resume_text,
+            target_job_description,
+            required_skills
+        )
+    else:
+        required_skills = []
+        score = 0
+        matched = []
+        missing = []
+
+    ats_feedback = check_ats_structure(resume_text)
+
+    ai_feedback = generate_builder_ai_feedback(
+        score=score,
+        matched=matched,
+        missing=missing,
+        ats_feedback=ats_feedback,
+        target_role=resume_data.get("target_role", "")
+    )
+
+    return render_template(
+        "resume_preview.html",
+        resume=resume_data,
+        score=score,
+        matched=matched,
+        missing=missing,
+        required_skills=sorted(required_skills),
+        ats_feedback=ats_feedback,
+        ai_feedback=ai_feedback
+    )
 
 @app.route("/service-worker.js")
 def service_worker():

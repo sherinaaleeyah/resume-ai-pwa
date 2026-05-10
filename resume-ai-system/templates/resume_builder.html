@@ -12,159 +12,342 @@
 
 <body>
 
-  <nav class="navbar navbar-expand-lg app-nav">
-    <div class="container-fluid dashboard-shell">
-      <span class="navbar-brand">
-        <i class="fa-solid fa-file-pen"></i> ATS Resume Builder
-      </span>
-      <a href="/job_seeker" class="btn btn-outline-light btn-sm">
-        <i class="fa-solid fa-arrow-left"></i> Back
-      </a>
+<nav class="navbar navbar-expand-lg app-nav">
+  <div class="container-fluid dashboard-shell">
+    <span class="navbar-brand">
+      <i class="fa-solid fa-file-pen"></i> ATS Resume Builder
+    </span>
+    <a href="/job_seeker" class="btn btn-outline-light btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+  </div>
+</nav>
+
+<main class="dashboard-shell">
+
+  <section class="hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow">Resume Builder</span>
+      <h1>Build an ATS-friendly resume with AI support.</h1>
+      <p>
+        Fill in structured resume sections. The system will organize your information,
+        improve your summary, generate resume-style bullets, calculate a score, and suggest improvements.
+      </p>
     </div>
-  </nav>
+  </section>
 
-  <main class="dashboard-shell">
+  <section class="workbench">
+    <div class="section-heading">
+      <span class="eyebrow">Resume Details</span>
+      <h2>Enter Your Information</h2>
+    </div>
 
-    <section class="hero-grid">
-      <div class="hero-copy">
-        <span class="eyebrow">Resume Builder</span>
-        <h1>Build an ATS-friendly resume from scratch.</h1>
-        <p>
-          Fill in your details using standard resume sections. The system will generate
-          a clean resume preview and can enhance your professional summary using AI.
-        </p>
+    <form action="/generate_resume" method="post" class="upload-form" onsubmit="prepareResumeData()">
+
+      <h3>Personal Information</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="full_name" placeholder="Example: Aiman Hakimi" required>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="Example: aiman@email.com" required>
+        </div>
       </div>
-    </section>
 
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Resume Details</span>
-        <h2>Enter Your Information</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" name="phone" placeholder="Example: 012-3456789">
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" name="location" placeholder="Example: Kuala Lumpur, Malaysia">
+        </div>
       </div>
 
-      <form action="/generate_resume" method="post" class="upload-form">
+      <div class="form-group">
+        <label>Target Role</label>
+        <input type="text" name="target_role" placeholder="Example: Software Engineer">
+      </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="full_name">Full Name</label>
-            <input 
-              type="text" 
-              id="full_name" 
-              name="full_name" 
-              placeholder="John Smith" 
-              required>
-          </div>
+      <div class="form-group">
+        <label for="target_job_description">Target Job Description</label>
+        <textarea 
+            id="target_job_description"
+            name="target_job_description" 
+            rows="7" 
+            placeholder="Paste the job description here. The system will compare your generated resume with this job description to calculate score, missing skills, and skill gaps."></textarea>
+        <small>This helps the system identify skill gaps and suggest improvements based on the job you are applying for.</small>
+      </div>
 
-          <div class="form-group">
-            <label for="email">Email Address</label>
-            <input 
-              type="email" 
-              id="email" 
-              name="email" 
-              placeholder="example@email.com" 
-              required>
-          </div>
-        </div>
+      <h3>Professional Summary</h3>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input 
-              type="text" 
-              id="phone" 
-              name="phone" 
-              placeholder="012-3456789">
-          </div>
+      <div class="form-group">
+        <label>Write 2-3 sentences about yourself</label>
+        <textarea name="summary" rows="4" placeholder="Example: Computer Science student with experience in web development, Python, Flask, and database systems. Interested in building scalable software solutions."></textarea>
+      </div>
 
-          <div class="form-group">
-            <label for="location">Location</label>
-            <input 
-              type="text" 
-              id="location" 
-              name="location" 
-              placeholder="Kuala Lumpur, Malaysia">
-          </div>
-        </div>
+      <h3>Skills</h3>
 
-        <div class="form-group">
-          <label for="target_role">Target Role</label>
-          <input 
-            type="text" 
-            id="target_role" 
-            name="target_role" 
-            placeholder="Example: Data Analyst Intern, Software Engineer, HR Executive">
-        </div>
+      <div class="inline-add">
+        <input type="text" id="skillInput" placeholder="Example: Python">
+        <button type="button" class="btn btn-primary" onclick="addSkill()">Add</button>
+      </div>
 
-        <div class="form-group">
-          <label for="summary">Professional Summary</label>
-          <textarea 
-            id="summary" 
-            name="summary" 
-            rows="5" 
-            placeholder="Write a short summary about your background, skills, and career goal. AI will improve this later."></textarea>
-        </div>
+      <div id="skillsList" class="builder-tag-list"></div>
 
-        <div class="form-group">
-          <label for="education">Education</label>
-          <textarea 
-            id="education" 
-            name="education" 
-            rows="5" 
-            placeholder="Example: Bachelor of Computer Science, International Islamic University Malaysia, 2022–Present"></textarea>
-        </div>
+      <h3>Work Experience</h3>
 
-        <div class="form-group">
-          <label for="experience">Work Experience</label>
-          <textarea 
-            id="experience" 
-            name="experience" 
-            rows="6" 
-            placeholder="Example: Job title, company name, duration, responsibilities, achievements"></textarea>
-        </div>
+      <div id="experienceContainer"></div>
 
-        <div class="form-group">
-          <label for="skills">Skills</label>
-          <textarea 
-            id="skills" 
-            name="skills" 
-            rows="4" 
-            placeholder="Example: Python, SQL, Machine Learning, Data Analysis, Communication"></textarea>
-        </div>
+      <button type="button" class="btn btn-outline-primary" onclick="addExperience()">
+        <i class="fa-solid fa-plus"></i> Add Experience
+      </button>
 
-        <div class="form-group">
-          <label for="projects">Projects</label>
-          <textarea 
-            id="projects" 
-            name="projects" 
-            rows="5" 
-            placeholder="Example: Project title, tools used, short description, outcome"></textarea>
-        </div>
+      <h3>Education</h3>
 
-        <div class="form-group">
-          <label for="certifications">Certifications</label>
-          <textarea 
-            id="certifications" 
-            name="certifications" 
-            rows="4" 
-            placeholder="Example: Google Data Analytics Certificate, Coursera, 2025"></textarea>
-        </div>
+      <div id="educationContainer"></div>
 
-        <button type="submit" class="btn btn-primary submit-btn">
-          <i class="fa-solid fa-eye"></i> Generate Resume Preview
-        </button>
+      <button type="button" class="btn btn-outline-primary" onclick="addEducation()">
+        <i class="fa-solid fa-plus"></i> Add Education
+      </button>
 
-      </form>
-    </section>
+      <h3>Projects</h3>
 
-  </main>
+      <div id="projectContainer"></div>
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/service-worker.js");
-      });
+      <button type="button" class="btn btn-outline-primary" onclick="addProject()">
+        <i class="fa-solid fa-plus"></i> Add Project
+      </button>
+
+      <h3>Certifications</h3>
+
+      <div id="certificationContainer"></div>
+
+      <button type="button" class="btn btn-outline-primary" onclick="addCertification()">
+        <i class="fa-solid fa-plus"></i> Add Certification
+      </button>
+
+      <input type="hidden" name="skills_json" id="skills_json">
+      <input type="hidden" name="experiences_json" id="experiences_json">
+      <input type="hidden" name="educations_json" id="educations_json">
+      <input type="hidden" name="projects_json" id="projects_json">
+      <input type="hidden" name="certifications_json" id="certifications_json">
+
+      <button type="submit" class="btn btn-primary submit-btn">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Resume with AI
+      </button>
+
+    </form>
+  </section>
+
+</main>
+
+<script>
+  let skills = [];
+
+  function addSkill() {
+    const input = document.getElementById("skillInput");
+    const skill = input.value.trim();
+
+    if (skill && !skills.includes(skill)) {
+      skills.push(skill);
+      input.value = "";
+      renderSkills();
     }
-  </script>
+  }
+
+  document.getElementById("skillInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addSkill();
+    }
+  });
+
+  function renderSkills() {
+    const list = document.getElementById("skillsList");
+    list.innerHTML = "";
+
+    skills.forEach((skill, index) => {
+      const tag = document.createElement("span");
+      tag.className = "builder-tag";
+      tag.innerHTML = `${skill} <button type="button" onclick="removeSkill(${index})">×</button>`;
+      list.appendChild(tag);
+    });
+  }
+
+  function removeSkill(index) {
+    skills.splice(index, 1);
+    renderSkills();
+  }
+
+  function addExperience() {
+    const container = document.getElementById("experienceContainer");
+
+    const block = document.createElement("div");
+    block.className = "dynamic-block experience-block";
+
+    block.innerHTML = `
+      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Company</label>
+          <input type="text" class="exp-company" placeholder="Example: TechNova Solutions">
+        </div>
+
+        <div class="form-group">
+          <label>Role</label>
+          <input type="text" class="exp-role" placeholder="Example: Software Development Intern">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Period</label>
+        <input type="text" class="exp-period" placeholder="Example: June 2025 - September 2025">
+      </div>
+
+      <div class="form-group">
+        <label>What did you do?</label>
+        <textarea class="exp-description" rows="4" placeholder="Write a few sentences. AI will convert this into resume-style bullet points."></textarea>
+      </div>
+    `;
+
+    container.appendChild(block);
+  }
+
+  function addEducation() {
+    const container = document.getElementById("educationContainer");
+
+    const block = document.createElement("div");
+    block.className = "dynamic-block education-block";
+
+    block.innerHTML = `
+      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>School / University</label>
+          <input type="text" class="edu-school" placeholder="Example: International Islamic University Malaysia">
+        </div>
+
+        <div class="form-group">
+          <label>Degree / Qualification</label>
+          <input type="text" class="edu-degree" placeholder="Example: Bachelor of Computer Science">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Period</label>
+        <input type="text" class="edu-period" placeholder="Example: 2022 - 2026">
+      </div>
+    `;
+
+    container.appendChild(block);
+  }
+
+  function addProject() {
+    const container = document.getElementById("projectContainer");
+
+    const block = document.createElement("div");
+    block.className = "dynamic-block project-block";
+
+    block.innerHTML = `
+      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+
+      <div class="form-group">
+        <label>Project Title</label>
+        <input type="text" class="project-title" placeholder="Example: AI-Based Resume Screening System">
+      </div>
+
+      <div class="form-group">
+        <label>Tools / Technologies</label>
+        <input type="text" class="project-tools" placeholder="Example: Python, Flask, NLP, TF-IDF, Bootstrap">
+      </div>
+
+      <div class="form-group">
+        <label>Project Description</label>
+        <textarea class="project-description" rows="4" placeholder="Briefly describe the project, your role, and the outcome."></textarea>
+      </div>
+    `;
+
+    container.appendChild(block);
+  }
+
+  function addCertification() {
+    const container = document.getElementById("certificationContainer");
+
+    const block = document.createElement("div");
+    block.className = "dynamic-block certification-block";
+
+    block.innerHTML = `
+      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Certification Name</label>
+          <input type="text" class="cert-name" placeholder="Example: Google Data Analytics Certificate">
+        </div>
+
+        <div class="form-group">
+          <label>Provider</label>
+          <input type="text" class="cert-provider" placeholder="Example: Coursera">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Year</label>
+        <input type="text" class="cert-year" placeholder="Example: 2025">
+      </div>
+    `;
+
+    container.appendChild(block);
+  }
+
+  function prepareResumeData() {
+    document.getElementById("skills_json").value = JSON.stringify(skills);
+
+    const experiences = Array.from(document.querySelectorAll(".experience-block")).map(block => ({
+      company: block.querySelector(".exp-company").value,
+      role: block.querySelector(".exp-role").value,
+      period: block.querySelector(".exp-period").value,
+      description: block.querySelector(".exp-description").value
+    }));
+
+    const educations = Array.from(document.querySelectorAll(".education-block")).map(block => ({
+      school: block.querySelector(".edu-school").value,
+      degree: block.querySelector(".edu-degree").value,
+      period: block.querySelector(".edu-period").value
+    }));
+
+    const projects = Array.from(document.querySelectorAll(".project-block")).map(block => ({
+      title: block.querySelector(".project-title").value,
+      tools: block.querySelector(".project-tools").value,
+      description: block.querySelector(".project-description").value
+    }));
+
+    const certifications = Array.from(document.querySelectorAll(".certification-block")).map(block => ({
+      name: block.querySelector(".cert-name").value,
+      provider: block.querySelector(".cert-provider").value,
+      year: block.querySelector(".cert-year").value
+    }));
+
+    document.getElementById("experiences_json").value = JSON.stringify(experiences);
+    document.getElementById("educations_json").value = JSON.stringify(educations);
+    document.getElementById("projects_json").value = JSON.stringify(projects);
+    document.getElementById("certifications_json").value = JSON.stringify(certifications);
+  }
+
+  addExperience();
+  addEducation();
+  addProject();
+  addCertification();
+</script>
 
 </body>
 </html>
