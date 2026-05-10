@@ -191,6 +191,85 @@ def generate_ai_summary(candidate_name, job_title, job_description, matched, mis
             print(f"An error occurred: {e}")
             return "Summary currently unavailable."
 
+#Job seeker: helper function
+def check_ats_structure(resume_text):
+    text = resume_text.lower()
+
+    standard_sections = {
+        "Skills": ["skills", "technical skills"],
+        "Education": ["education", "academic background"],
+        "Experience": ["experience", "work experience", "employment history"],
+        "Projects": ["projects", "project experience"],
+        "Certifications": ["certifications", "certificates"]
+    }
+
+    feedback = []
+
+    for section, keywords in standard_sections.items():
+        found = any(keyword in text for keyword in keywords)
+
+        if found:
+            feedback.append({
+                "section": section,
+                "status": "Detected",
+                "message": f"{section} section is detected."
+            })
+        else:
+            feedback.append({
+                "section": section,
+                "status": "Missing",
+                "message": f"{section} section is not clearly detected. Consider adding this section."
+            })
+
+    return feedback
+
+#Job seeker: AI Feedback Function
+def generate_job_seeker_ai_feedback(score, matched, missing, ats_feedback, job_description):
+    missing_sections = [
+        item["section"] for item in ats_feedback if item["status"] == "Missing"
+    ]
+
+    prompt = f"""
+    You are an AI resume advisor helping a job seeker improve their resume for a target job.
+
+    Target Job Description:
+    {job_description}
+
+    Resume Match Score: {score}%
+
+    Matched Skills:
+    {", ".join(matched) if matched else "No strong matched skills detected."}
+
+    Missing Skills:
+    {", ".join(missing) if missing else "No major missing skills detected."}
+
+    Missing ATS Sections:
+    {", ".join(missing_sections) if missing_sections else "No major missing ATS sections detected."}
+
+    Task:
+    Write a clear and honest resume analysis for the job seeker.
+
+    Requirements:
+    1. Start by explaining what the match score means.
+    2. Mention the candidate's strongest matching areas.
+    3. Clearly explain the missing skills or skill gaps.
+    4. Mention ATS structure issues if any.
+    5. Give practical improvement suggestions.
+    6. Do not exaggerate. Be honest but encouraging.
+    7. Write in 2 short paragraphs, suitable for a student/job seeker.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+
+    except exceptions.ResourceExhausted:
+        return "AI feedback is temporarily unavailable due to usage limits. However, you can improve your resume by adding missing skills, using clear ATS-friendly section headings, and aligning your wording with the job description."
+
+    except Exception as e:
+        print(f"AI feedback error: {e}")
+        return "AI feedback is currently unavailable. Please review the matched skills, missing skills, and ATS section feedback below."
+
 def format_activity_date(value):
     try:
         return datetime.fromisoformat(value).strftime("%d %b")
@@ -650,6 +729,57 @@ def rank_job_resumes(job_id):
 @app.route("/job_seeker")
 def job_seeker():
     return render_template("job_seeker.html")
+
+@app.route("/analyze_job_seeker_resume", methods=["POST"])
+def analyze_job_seeker_resume():
+    job_description = request.form.get("job_description", "").strip()
+    resume_file = request.files.get("resume")
+
+    if not resume_file or not job_description:
+        return render_template(
+            "job_seeker_result.html",
+            error="Please upload a resume and paste a target job description."
+        )
+
+    filename = resume_file.filename.lower()
+
+    if filename.endswith(".pdf"):
+        resume_text = parse_pdf(resume_file)
+    elif filename.endswith(".docx"):
+        resume_text = parse_docx(resume_file)
+    else:
+        return render_template(
+            "job_seeker_result.html",
+            error="Unsupported file format. Please upload PDF or DOCX."
+        )
+
+    required_skills = extract_required_skills(job_description)
+
+    score, matched, missing = calculate_combined_score(
+        resume_text,
+        job_description,
+        required_skills
+    )
+
+    ats_feedback = check_ats_structure(resume_text)
+
+    ai_feedback = generate_job_seeker_ai_feedback(
+        score=score,
+        matched=matched,
+        missing=missing,
+        ats_feedback=ats_feedback,
+        job_description=job_description
+    )
+
+    return render_template(
+        "job_seeker_result.html",
+        score=score,
+        matched=matched,
+        missing=missing,
+        required_skills=sorted(required_skills),
+        ats_feedback=ats_feedback,
+        ai_feedback=ai_feedback
+    )
 
 
 @app.route("/service-worker.js")

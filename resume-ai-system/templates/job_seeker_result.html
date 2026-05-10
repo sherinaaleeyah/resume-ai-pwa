@@ -17,5 +17,120 @@
     </div>
   </nav>
 
+  <main class="dashboard-shell">
+
+    {% if error %}
+
+      <section class="workbench">
+        <h2>Error</h2>
+        <p>{{ error }}</p>
+      </section>
+
+    {% else %}
+
+      <section class="results-header">
+        <div>
+          <span class="eyebrow">Resume Match Analysis</span>
+          <h1>Your Resume Match Score</h1>
+          <p>This score is calculated using skill matching and resume-job description similarity.</p>
+        </div>
+
+        <div class="shortlist-card">
+          <strong>{{ score }}%</strong>
+          <span>Match Score</span>
+        </div>
+      </section>
+
+      <section class="workbench">
+        <div class="section-heading">
+          <span class="eyebrow">Explainable AI</span>
+          <h2>AI Explanation and Improvement Advice</h2>
+        </div>
+        <p>{{ ai_feedback }}</p>
+      </section>
+
+      <section class="content-grid">
+
+        <article>
+          <div class="icon-chip">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h3>Matched Skills</h3>
+
+          <div class="skill-list">
+            {% if matched %}
+              {% for skill in matched %}
+                <span class="skill-tag matched-skill">{{ skill }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="muted">No strong matched skills detected.</span>
+            {% endif %}
+          </div>
+        </article>
+
+        <article>
+          <div class="icon-chip">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h3>Missing Skills / Skill Gaps</h3>
+
+          <div class="skill-list">
+            {% if missing %}
+              {% for skill in missing %}
+                <span class="skill-tag missing-skill">{{ skill }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="muted">No major missing skills detected.</span>
+            {% endif %}
+          </div>
+        </article>
+
+      </section>
+
+      <section class="workbench">
+        <div class="section-heading">
+          <span class="eyebrow">ATS Structure Check</span>
+          <h2>Resume Section Analysis</h2>
+        </div>
+
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>Status</th>
+              <th>Feedback</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for item in ats_feedback %}
+            <tr>
+              <td>{{ item.section }}</td>
+              <td>
+                {% if item.status == "Detected" %}
+                  <span class="status status-good">Detected</span>
+                {% else %}
+                  <span class="status status-review">Missing</span>
+                {% endif %}
+              </td>
+              <td>{{ item.message }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+    {% endif %}
+
+  </main>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js");
+      });
+    }
+  </script>
+
 </body>
 </html>

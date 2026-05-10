@@ -17,3 +17,94 @@
       <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back Home</a>
     </div>
   </nav>
+
+  <!-- Job Seeker Section -->
+  <main class="dashboard-shell">
+
+    <section class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Job Seeker Module</span>
+        <h1>Analyze and improve your resume for a target job.</h1>
+        <p>
+          Upload your existing resume and paste a target job description to get a match score,
+          skill gap analysis, ATS structure feedback, and AI-generated improvement suggestions.
+        </p>
+      </div>
+    </section>
+
+    <section class="content-grid">
+
+      <!-- Upload Existing Resume -->
+      <article>
+        <div class="icon-chip">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+        </div>
+
+        <h3>Analyze Existing Resume</h3>
+        <p>
+          Upload your resume and compare it against a target job description.
+          The system will calculate your match score and explain what can be improved.
+        </p>
+
+        <form action="/analyze_job_seeker_resume" method="post" enctype="multipart/form-data" class="upload-form">
+
+          <div class="form-group">
+            <label for="job_description">Target Job Description</label>
+            <textarea 
+              id="job_description" 
+              name="job_description" 
+              rows="7" 
+              placeholder="Paste the job description here, including required skills, responsibilities, qualifications, and experience."
+              required></textarea>
+          </div>
+
+          <div class="form-group file-zone">
+            <label for="resume">Upload Resume</label>
+            <input 
+              id="resume" 
+              type="file" 
+              name="resume" 
+              accept=".pdf,.docx" 
+              required>
+            <small>Supported formats: PDF and DOCX.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary submit-btn">
+            <i class="fa-solid fa-chart-line"></i> Analyze Resume
+          </button>
+
+        </form>
+      </article>
+
+      <!-- Build Resume From Scratch -->
+      <article>
+        <div class="icon-chip">
+          <i class="fa-solid fa-file-pen"></i>
+        </div>
+
+        <h3>Build ATS-Friendly Resume</h3>
+        <p>
+          Create a structured resume from scratch using ATS-friendly sections such as
+          Skills, Education, Work Experience, Projects, and Certifications.
+        </p>
+
+        <a href="/resume_builder" class="btn btn-primary">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Open Resume Builder
+        </a>
+      </article>
+
+    </section>
+
+  </main>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js");
+      });
+    }
+  </script>
+
+</body>
+</html>
+
