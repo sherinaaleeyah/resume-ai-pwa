@@ -880,6 +880,12 @@ def home():
 def rank_resumes():
     job_description = request.form.get("job_description", "")
     required_skills = extract_required_skills(job_description)
+    submitted_names = [
+        name.strip()
+        for field_name in ("candidate_names", "candidate_name", "name", "full_name")
+        for name in request.form.getlist(field_name)
+        if name.strip()
+    ]
 
     results = []
     for file in request.files.getlist("resumes"):
@@ -890,9 +896,12 @@ def rank_resumes():
         else:
             continue
 
+        submitted_name = submitted_names.pop(0) if submitted_names else ""
+        candidate_name = submitted_name or candidate_name_from_filename(file.filename)
+
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
         results.append({
-            "candidate": file.filename,
+            "candidate": candidate_name,
             "score": score,
             "matched": matched,
             "missing": missing,
@@ -1071,7 +1080,7 @@ def rank_job_resumes(job_id):
         )
 
         results.append({
-            "candidate": file.filename,
+            "candidate": candidate_name,
             "candidate_name": candidate_name,
             "score": score,
             "matched": matched,
