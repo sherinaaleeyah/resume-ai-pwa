@@ -889,10 +889,10 @@ def rank_resumes():
             text = parse_docx(file)
         else:
             continue
-    
+
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
         results.append({
-            "candidate":file.filename,
+            "candidate": file.filename,
             "score": score,
             "matched": matched,
             "missing": missing,
@@ -1178,6 +1178,82 @@ def analyze_job_seeker_resume():
         ats_feedback=ats_feedback,
         ai_feedback=ai_feedback
     )
+
+def check_builder_ats_structure(resume_data):
+    feedback = []
+
+    skills = resume_data.get("skills", [])
+    educations = resume_data.get("educations", [])
+    experiences = resume_data.get("experiences", [])
+    projects = resume_data.get("projects", [])
+    certifications = resume_data.get("certifications", [])
+
+    if skills:
+        feedback.append({
+            "section": "Skills",
+            "status": "Detected",
+            "message": "Skills section is detected."
+        })
+    else:
+        feedback.append({
+            "section": "Skills",
+            "status": "Missing",
+            "message": "Skills section is not clearly detected. Consider adding relevant technical and soft skills."
+        })
+
+    if educations:
+        feedback.append({
+            "section": "Education",
+            "status": "Detected",
+            "message": "Education section is detected."
+        })
+    else:
+        feedback.append({
+            "section": "Education",
+            "status": "Missing",
+            "message": "Education section is not clearly detected. Consider adding your school, degree, and study period."
+        })
+
+    if experiences:
+        feedback.append({
+            "section": "Experience",
+            "status": "Detected",
+            "message": "Experience section is detected."
+        })
+    else:
+        feedback.append({
+            "section": "Experience",
+            "status": "Missing",
+            "message": "Experience section is not clearly detected. Consider adding work experience, internship, or relevant responsibilities."
+        })
+
+    if projects:
+        feedback.append({
+            "section": "Projects",
+            "status": "Detected",
+            "message": "Projects section is detected."
+        })
+    else:
+        feedback.append({
+            "section": "Projects",
+            "status": "Missing",
+            "message": "Projects section is not clearly detected. Consider adding academic or personal projects."
+        })
+
+    if certifications:
+        feedback.append({
+            "section": "Certifications",
+            "status": "Detected",
+            "message": "Certifications section is detected."
+        })
+    else:
+        feedback.append({
+            "section": "Certifications",
+            "status": "Missing",
+            "message": "Certifications section is not clearly detected. Consider adding relevant certificates if available."
+        })
+
+    return feedback
 
 @app.route("/download_resume_docx", methods=["POST"])
 def download_resume_docx():
@@ -1474,7 +1550,7 @@ def generate_resume():
         matched = []
         missing = []
 
-    ats_feedback = check_ats_structure(resume_text)
+    ats_feedback = check_builder_ats_structure(resume_data)
 
     ai_feedback = generate_builder_ai_feedback(
         score=score,
