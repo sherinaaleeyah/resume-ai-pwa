@@ -871,6 +871,17 @@ def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_r
     except Exception as e:
         print(f"AI builder feedback error: {e}")
         return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
+    
+def get_submitted_candidate_names():
+    submitted_names = []
+    for field_name in ("candidate_names", "candidate_name", "name", "full_name"):
+        submitted_names.extend(name.strip() for name in request.form.getlist(field_name))
+    return [name for name in submitted_names if name]
+
+def candidate_name_from_filename(filename):
+    name = re.sub(r"\.[^.]+$", "", filename)
+    name = re.sub(r"[_-]+", " ", name)
+    return name.strip().title() or filename
 
 @app.route("/", methods=["GET"])
 def home():
@@ -880,7 +891,9 @@ def home():
 def rank_resumes():
     job_description = request.form.get("job_description", "")
     required_skills = extract_required_skills(job_description)
-
+    submitted_names = get_submitted_candidate_names()
+    shared_candidate_name = get_submitted_candidate_names()
+    
     results = []
     for file in request.files.getlist("resumes"):
         if file.filename.endswith(".pdf"):
@@ -889,10 +902,13 @@ def rank_resumes():
             text = parse_docx(file)
         else:
             continue
+        
+        submitted_name = submitted_names.pop(0) if submitted_names else ""
+        candidate_name = submitted_name or shared_candidate_name or candidate_name_from_filename(file.filename)
 
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
         results.append({
-            "candidate": file.filename,
+            "candidate": candidate_name,
             "score": score,
             "matched": matched,
             "missing": missing,
@@ -1071,7 +1087,7 @@ def rank_job_resumes(job_id):
         )
 
         results.append({
-            "candidate": file.filename,
+            "candidate": candidate_name,
             "candidate_name": candidate_name,
             "score": score,
             "matched": matched,
