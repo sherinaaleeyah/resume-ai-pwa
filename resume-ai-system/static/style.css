@@ -874,6 +874,22 @@ textarea {
     max-width: 340px;
 }
 
+.resume-link {
+    color: #0c6264;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    max-width: 220px;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+.resume-link:hover {
+    color: #0f8b8d;
+    text-decoration: underline;
+}
+
 .matched-skill {
     background: #e0f7ec;
     color: #167a43;

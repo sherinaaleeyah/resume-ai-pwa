@@ -38,6 +38,7 @@
         <thead>
           <tr>
             <th>Candidate</th>
+            <th>Resume File</th>
             <th>Score</th>
             <th>Status</th>
             <th>Matched Skills</th>
@@ -49,6 +50,15 @@
           {% for r in results %}
           <tr>
             <td>{{ r.candidate }}</td>
+            <td>
+              {% if r.file_url %}
+                <a class="resume-link" href="{{ r.file_url }}" target="_blank" rel="noopener">
+                  <i class="fa-solid fa-file-arrow-up"></i> {{ r.file_name }}
+                </a>
+              {% else %}
+                <span class="muted">{{ r.file_name or 'No file available' }}</span>
+              {% endif %}
+            </td>
             <td>
               <div class="score-cell">
                 <span>{{ r.score }}%</span>
@@ -90,7 +100,7 @@
           {% endfor %}
           {% else %}
           <tr>
-            <td colspan="5" class="empty-state">
+            <td colspan="6" class="empty-state">
               No supported resumes were uploaded. Please upload PDF or DOCX files.
             </td>
           </tr>

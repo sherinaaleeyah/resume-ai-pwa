@@ -15,6 +15,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import time
 from google.api_core import exceptions
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
@@ -25,6 +26,8 @@ model = genai.GenerativeModel("models/gemini-2.5-flash")
 app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.path.join(BASE_DIR, "hiring_dashboard.db")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Load spaCy model (run: python -m spacy download en_core_web_sm)
 try:
@@ -395,6 +398,17 @@ def candidate_name_from_filename(filename):
     cleaned = re.sub(r"\b(resume|cv|profile)\b", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned.title() if cleaned else filename
+
+def save_uploaded_resume(file):
+    original_filename = secure_filename(file.filename) or "resume"
+    stem = Path(original_filename).stem or "resume"
+    suffix = Path(original_filename).suffix.lower()
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    saved_filename = f"{stem}_{timestamp}{suffix}"
+    file.stream.seek(0)
+    file.save(os.path.join(UPLOAD_DIR, saved_filename))
+    file.stream.seek(0)
+    return original_filename, saved_filename
 
 def match_strength(score):
     if score >= 85:
@@ -889,19 +903,24 @@ def rank_resumes():
 
     results = []
     for file in request.files.getlist("resumes"):
-        if file.filename.endswith(".pdf"):
-            text = parse_pdf(file)
-        elif file.filename.endswith(".docx"):
-            text = parse_docx(file)
-        else:
+        submitted_filename = file.filename.lower()
+        if not (submitted_filename.endswith(".pdf") or submitted_filename.endswith(".docx")):
             continue
 
+        original_filename, saved_filename = save_uploaded_resume(file)
+        if original_filename.lower().endswith(".pdf"):
+            text = parse_pdf(file)
+        elif original_filename.lower().endswith(".docx"):
+            text = parse_docx(file)
+
         submitted_name = submitted_names.pop(0) if submitted_names else ""
-        candidate_name = submitted_name or candidate_name_from_filename(file.filename)
+        candidate_name = submitted_name or candidate_name_from_filename(original_filename)
 
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
         results.append({
             "candidate": candidate_name,
+            "file_name": original_filename,
+            "file_url": url_for("uploaded_file", filename=saved_filename),
             "score": score,
             "matched": matched,
             "missing": missing,
@@ -1057,17 +1076,20 @@ def rank_job_resumes(job_id):
     
     for index, file in enumerate(request.files.getlist("resumes")):
         filename = file.filename.lower()
+        if not (filename.endswith(".pdf") or filename.endswith(".docx")):
+            continue
+
+        original_filename, saved_filename = save_uploaded_resume(file)
+        filename = original_filename.lower()
         if filename.endswith(".pdf"):
             text = parse_pdf(file)
         elif filename.endswith(".docx"):
             text = parse_docx(file)
-        else:
-            continue
 
         score, matched, missing = calculate_combined_score(text, job_description, required_skills)
         
         # Determine candidate name
-        candidate_name = submitted_names[index] if index < len(submitted_names) and submitted_names[index] else candidate_name_from_filename(file.filename)
+        candidate_name = submitted_names[index] if index < len(submitted_names) and submitted_names[index] else candidate_name_from_filename(original_filename)
         
         # 2. UPDATED FUNCTION CALL
         # Note: We use job_description (the variable we created above)
@@ -1082,6 +1104,8 @@ def rank_job_resumes(job_id):
         results.append({
             "candidate": candidate_name,
             "candidate_name": candidate_name,
+            "file_name": original_filename,
+            "file_url": url_for("uploaded_file", filename=saved_filename),
             "score": score,
             "matched": matched,
             "missing": missing,
@@ -1103,7 +1127,7 @@ def rank_job_resumes(job_id):
                     (
                         job_id,
                         result["candidate_name"],
-                        result["candidate"],
+                        result["file_name"],
                         result["score"],
                         json.dumps(result["matched"]),
                         json.dumps(result["missing"]),
@@ -1583,6 +1607,10 @@ def generate_resume():
 @app.route("/service-worker.js")
 def service_worker():
     return send_from_directory("static", "service-worker.js")
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_DIR, filename)
 
 if __name__ == "__main__":
     app.run(debug=True)
