@@ -1,7 +1,8 @@
 Flask
 pdfplumber
 python-docx
-spacy
+numpy==1.26.4
+spacy==3.7.5
 scikit-learn
 google-generativeai
 google-api-core
