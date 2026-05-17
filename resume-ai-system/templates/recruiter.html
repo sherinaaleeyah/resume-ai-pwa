@@ -359,6 +359,16 @@
       
     {% endif %}
   </main>
+
+  <!-- Ranking loader overlay -->
+  <div id="ranking-loader" class="ranking-loader" hidden>
+    <div class="ranking-loader-card">
+      <div class="loader-ring"></div>
+      <p class="loader-title">Ranking candidates</p>
+      <p class="loader-subtitle">This may take a moment&hellip;</p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const resumeInput = document.getElementById("resumes");
@@ -401,6 +411,14 @@
         if (resumeInput.files.length > 0) {
           bootstrap.Modal.getOrCreateInstance(candidateModalElement).show();
         }
+      });
+    }
+
+    const rankForm = document.getElementById("resume-rank-form");
+    const rankingLoader = document.getElementById("ranking-loader");
+    if (rankForm && rankingLoader) {
+      rankForm.addEventListener("submit", function () {
+        rankingLoader.removeAttribute("hidden");
       });
     }
   </script>

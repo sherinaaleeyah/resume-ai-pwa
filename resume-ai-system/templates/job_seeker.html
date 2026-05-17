@@ -46,7 +46,7 @@
           The system will calculate your match score and explain what can be improved.
         </p>
 
-        <form action="/analyze_job_seeker_resume" method="post" enctype="multipart/form-data" class="upload-form">
+        <form id="analyze-resume-form" action="/analyze_job_seeker_resume" method="post" enctype="multipart/form-data" class="upload-form">
 
           <div class="form-group">
             <label for="job_description">Target Job Description</label>
@@ -97,10 +97,27 @@
 
   </main>
 
+  <!-- Analysis loader overlay -->
+  <div id="analyze-loader" class="ranking-loader" hidden>
+    <div class="ranking-loader-card">
+      <div class="loader-ring"></div>
+      <p class="loader-title">Analysing your resume</p>
+      <p class="loader-subtitle">Matching skills and generating feedback.<br>This may take a moment&hellip;</p>
+    </div>
+  </div>
+
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker.register("/service-worker.js");
+      });
+    }
+
+    const analyzeForm = document.getElementById("analyze-resume-form");
+    const analyzeLoader = document.getElementById("analyze-loader");
+    if (analyzeForm && analyzeLoader) {
+      analyzeForm.addEventListener("submit", function () {
+        analyzeLoader.removeAttribute("hidden");
       });
     }
   </script>
