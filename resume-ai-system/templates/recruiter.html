@@ -12,8 +12,11 @@
 <body>
   <nav class="navbar navbar-expand-lg app-nav">
     <div class="container-fluid dashboard-shell">
-      <span class="navbar-brand"><i class="fa-solid fa-chart-line"></i> Hiring Intelligence Dashboard</span>
-      <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back </a>
+      <div class="nav-left">
+        <span class="navbar-brand"><i class="fa-solid fa-wand-magic-sparkles"></i> TalentMatch</span>
+        <span class="nav-mode-pill">Recruiter</span>
+      </div>
+      <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back</a>
     </div>
   </nav>
 
@@ -143,9 +146,22 @@
                         <span class="status status-good">{{ candidate.strength }}</span>
                         <p>{{ candidate.file_name }} • {{ candidate.matched|length }} matched • {{ candidate.missing|length }} missing</p>
                       </div>
-                      <div class="match-score">
-                        <strong>{{ candidate.score }}</strong>
-                        <span>Match</span>
+                      {% set _s = candidate.score | float %}
+                      {% if _s >= 85 %}{% set _rc = '#22c55e' %}
+                      {% elif _s >= 70 %}{% set _rc = '#84cc16' %}
+                      {% elif _s >= 55 %}{% set _rc = '#f59e0b' %}
+                      {% elif _s >= 40 %}{% set _rc = '#f97316' %}
+                      {% else %}{% set _rc = '#ef4444' %}{% endif %}
+                      <div class="score-ring" aria-label="Match score {{ candidate.score }}%">
+                        <svg viewBox="0 0 52 52" class="score-ring-svg">
+                          <circle cx="26" cy="26" r="20" class="score-ring-track"/>
+                          <circle cx="26" cy="26" r="20" class="score-ring-fill"
+                            style="stroke-dasharray: {{ (_s / 100 * 125.66) | round(1) }} 125.66; stroke: {{ _rc }};"/>
+                        </svg>
+                        <div class="score-ring-label">
+                          <span class="score-ring-num">{{ candidate.score }}</span>
+                          <span class="score-ring-pct">%</span>
+                        </div>
                       </div>
                     </div>
 
@@ -287,7 +303,7 @@
 
                 <div class="posting-actions">
                   <a class="btn btn-primary" href="{{ url_for('job_detail', job_id=job.id) }}">
-                    <i class="fa-solid fa-ranking-star"></i> View/Rank
+                    <i class="fa-solid fa-ranking-star"></i> View
                   </a>
                   <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post">
                     <button class="btn btn-outline-danger" type="submit" aria-label="Delete {{ job.title }} job posting">

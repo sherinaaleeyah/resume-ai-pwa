@@ -11,7 +11,10 @@
 <body>
   <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
-      <span class="navbar-brand"><i class="fa-solid fa-ranking-star"></i> Candidate Ranking</span>
+      <div class="nav-left">
+        <span class="navbar-brand"><i class="fa-solid fa-wand-magic-sparkles"></i> TalentMatch</span>
+        <span class="nav-mode-pill">Recruiter</span>
+      </div>
       {% if job %}
         <a class="btn btn-outline-light btn-sm" href="{{ url_for('job_detail', job_id=job.id) }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
       {% else %}
