@@ -3,7 +3,10 @@ from io import BytesIO
 import pdfplumber
 import docx
 import re
-import spacy
+try:
+    import spacy
+except Exception:
+    spacy = None
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
@@ -29,10 +32,13 @@ DATABASE = os.path.join(BASE_DIR, "hiring_dashboard.db")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Load spaCy model (run: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
+# Load spaCy model only if available
+if spacy:
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except Exception:
+        nlp = None
+else:
     nlp = None
 
 # Comprehensive technical skill regex patterns
