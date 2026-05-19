@@ -38,8 +38,20 @@
           <p>This score is calculated using skill matching and resume-job description similarity.</p>
         </div>
 
-        <div class="shortlist-card">
-          <strong>{{ score }}%</strong>
+        {% set _s = score | float %}
+        {% if _s >= 85 %}
+          {% set _bg = 'rgba(34,197,94,0.15)'  %}{% set _bdr = 'rgba(34,197,94,0.4)'  %}{% set _clr = '#4ade80' %}
+        {% elif _s >= 70 %}
+          {% set _bg = 'rgba(13,148,136,0.15)' %}{% set _bdr = 'rgba(13,148,136,0.4)' %}{% set _clr = '#2dd4bf' %}
+        {% elif _s >= 55 %}
+          {% set _bg = 'rgba(245,158,11,0.15)' %}{% set _bdr = 'rgba(245,158,11,0.4)' %}{% set _clr = '#fbbf24' %}
+        {% elif _s >= 40 %}
+          {% set _bg = 'rgba(249,115,22,0.15)' %}{% set _bdr = 'rgba(249,115,22,0.4)' %}{% set _clr = '#fb923c' %}
+        {% else %}
+          {% set _bg = 'rgba(239,68,68,0.15)'  %}{% set _bdr = 'rgba(239,68,68,0.4)'  %}{% set _clr = '#f87171' %}
+        {% endif %}
+        <div class="shortlist-card" style="background: {{ _bg }} !important; border-color: {{ _bdr }} !important;">
+          <strong style="color: {{ _clr }};">{{ score }}%</strong>
           <span>Match Score</span>
         </div>
       </section>
