@@ -22,11 +22,25 @@
 
   <main class="dashboard-shell">
     {% if selected_job %}
-      <section class="job-detail-header">
+      <section class="job-detail-header" style="align-items: start;">
         <div>
           <span class="eyebrow">Candidate Ranking</span>
           <h1>{{ selected_job.title }}</h1>
           <p>{{ selected_job.company }}</p>
+          
+          <div class="header-detected-skills">
+            <span class="skills-eyebrow">Extracted Skills</span>
+            <div class="skill-list">
+              {% if required_skills %}
+                {% for skill in required_skills %}
+                  <span class="skill-tag">{{ skill }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="muted-dim">No technical skills detected yet.</span>
+              {% endif %}
+            </div>
+          </div>
+
         </div>
         <div class="job-header-metrics" aria-label="Job scoring metrics">
           <div>
@@ -45,17 +59,8 @@
         <a class="btn btn-outline-primary" href="{{ url_for('recruiter') }}">
           <i class="fa-solid fa-table-columns"></i> Dashboard
         </a>
-      </section>
-
-    <section class="job-review-grid">
-        <aside class="job-summary-panel">
-          <div class="section-heading">
-            <span class="eyebrow">Job Intelligence</span>
-            <h2>Edit job description</h2>
-          </div>
-
-          <details class="job-description-dropdown">
-            <summary>Update role details</summary>
+        <details class="job-description-dropdown">
+            <summary>View full job description</summary>
             <div class="description-content">
               <form action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form">
                 <div class="form-group">
@@ -68,7 +73,7 @@
                 </div>
                 <div class="form-group">
                   <label for="edit-description">Job Description</label>
-                  <textarea id="edit-description" name="description" rows="8" required>{{ selected_job.description }}</textarea>
+                  <textarea id="edit-description" name="description" rows="10" required>{{ selected_job.description }}</textarea>
                 </div>
                 <button type="submit" class="btn btn-primary submit-btn">
                   <i class="fa-solid fa-floppy-disk"></i> Save Changes
@@ -77,18 +82,9 @@
             </div>
           </details>
 
-          <h3>Detected Skills</h3>
-          <div class="skill-list">
-            {% if required_skills %}
-              {% for skill in required_skills %}
-                <span class="skill-tag">{{ skill }}</span>
-              {% endfor %}
-            {% else %}
-              <span class="muted">No technical skills detected yet.</span>
-            {% endif %}
-          </div>
-        </aside>
+      </section>
 
+    <section class="job-review-grid{% if required_skills and ranked_candidates %} two-col{% endif %}">
         <article class="workbench">
           <div class="section-heading">
             <span class="eyebrow">Upload Zone</span>
@@ -140,7 +136,8 @@
                 
                   <article class="ranked-candidate-card">
                     <div class="ranked-candidate-main">
-                      <div>
+                      <div class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}" aria-label="Rank {{ loop.index }}">{{ loop.index }}</div>
+                      <div class="ranked-candidate-info">
                         <h3>{{ candidate.candidate_name }}</h3>
 
                         <span class="status status-good">{{ candidate.strength }}</span>
@@ -212,6 +209,41 @@
             {% endif %}
           </section>
         </article>
+
+        {% if required_skills and ranked_candidates %}
+        <aside class="pool-analysis-panel">
+          <div class="section-heading">
+            <span class="eyebrow">Pool Analysis</span>
+            <h2>Skill Gap Coverage</h2>
+          </div>
+          <p class="skill-gap-subtitle">Coverage across {{ ranked_candidates|length }} ranked candidate{{ 's' if ranked_candidates|length != 1 else '' }}</p>
+          <div class="skill-gap-grid">
+            {% for skill in required_skills %}
+              {% set ns = namespace(count=0) %}
+              {% for candidate in ranked_candidates %}
+                {% if skill in candidate.matched %}
+                  {% set ns.count = ns.count + 1 %}
+                {% endif %}
+              {% endfor %}
+              {% set total = ranked_candidates|length %}
+              {% set pct = ((ns.count / total) * 100)|round|int if total > 0 else 0 %}
+              {% if pct >= 75 %}{% set bar_color = '#22c55e' %}
+              {% elif pct >= 40 %}{% set bar_color = '#f59e0b' %}
+              {% else %}{% set bar_color = '#ef4444' %}{% endif %}
+              <div class="skill-gap-item">
+                <div class="skill-gap-label">
+                  <span class="skill-gap-name" title="{{ skill }}">{{ skill }}</span>
+                  <span class="skill-gap-count">{{ ns.count }}/{{ total }}</span>
+                </div>
+                <div class="skill-gap-bar-track">
+                  <div class="skill-gap-bar-fill" style="width: {{ pct }}%; background: {{ bar_color }};"></div>
+                </div>
+                <span class="skill-gap-pct" style="color: {{ bar_color }};">{{ pct }}%</span>
+              </div>
+            {% endfor %}
+          </div>
+        </aside>
+        {% endif %}
       </section>
     {% else %}
 

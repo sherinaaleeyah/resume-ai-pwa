@@ -7,37 +7,39 @@
    DESIGN TOKENS
    ============================================================ */
 :root {
-    --black:        #0d0d0d;
-    --black-soft:   #161616;
-    --gray-900:     #212121;
-    --gray-700:     #3d3d3d;
-    --gray-600:     #555555;
-    --gray-500:     #6e6e6e;
-    --gray-400:     #9a9a9a;
-    --gray-300:     #c8c8c8;
-    --gray-200:     #e0e0e0;
-    --gray-100:     #efefef;
-    --gray-50:      #f7f7f7;
+    --black:        #0f0f14;
+    --black-soft:   #1a1a24;
+    --gray-900:     #1e1e2e;
+    --gray-700:     #3a3a4a;
+    --gray-600:     #525268;
+    --gray-500:     #6b6b80;
+    --gray-400:     #9898aa;
+    --gray-300:     #c5c5d2;
+    --gray-200:     #e0e0ea;
+    --gray-100:     #f0f0f5;
+    --gray-50:      #f5f5f9;
     --white:        #ffffff;
-    --border:       #e3e3e3;
+    --border:       #e4e4ee;
 
-    --shadow-xs:    0 1px 2px rgba(0,0,0,0.04);
-    --shadow-sm:    0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md:    0 4px 16px rgba(0,0,0,0.09);
-    --shadow-lg:    0 8px 32px rgba(0,0,0,0.11);
-    --shadow-xl:    0 20px 64px rgba(0,0,0,0.14);
+    --shadow-xs:    0 1px 2px rgba(15,15,30,0.04);
+    --shadow-sm:    0 1px 3px rgba(15,15,30,0.04), 0 4px 12px rgba(15,15,30,0.05);
+    --shadow-md:    0 4px 8px rgba(15,15,30,0.05), 0 12px 32px rgba(15,15,30,0.08);
+    --shadow-lg:    0 8px 16px rgba(15,15,30,0.06), 0 24px 52px rgba(15,15,30,0.10);
+    --shadow-xl:    0 20px 40px rgba(15,15,30,0.10), 0 48px 96px rgba(15,15,30,0.08);
 
     --radius-xs:    4px;
     --radius-sm:    8px;
-    --radius-md:    12px;
-    --radius-lg:    16px;
-    --radius-xl:    24px;
+    --radius-md:    14px;
+    --radius-lg:    20px;
+    --radius-xl:    28px;
 
     --font:         'Inter', "Segoe UI", system-ui, -apple-system, sans-serif;
     --t:            0.15s ease;
-    --accent:       #0d9488;
-    --accent-light: #f0fdfa;
-    --accent-border:#99f6e4;
+    --accent:       #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-light: #eef2ff;
+    --accent-border:#c7d2fe;
+    --accent-glow:  rgba(99,102,241,0.18);
 }
 
 /* ============================================================
@@ -96,9 +98,9 @@ body {
     text-transform: uppercase;
     padding: 3px 10px;
     border-radius: 999px;
-    background: rgba(13,148,136,0.18);
-    color: var(--accent);
-    border: 1px solid rgba(13,148,136,0.28);
+    background: rgba(99,102,241,0.18);
+    color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.32);
 }
 
 .navbar-brand {
@@ -114,8 +116,8 @@ body {
 
 .navbar-brand i {
     font-size: 1rem;
-    color: var(--accent);
-    filter: drop-shadow(0 0 6px rgba(13,148,136,0.55));
+    color: #a5b4fc;
+    filter: drop-shadow(0 0 8px rgba(99,102,241,0.6));
 }
 
 .nav-pill {
@@ -144,15 +146,15 @@ body {
 .btn:active { transform: scale(0.98); }
 
 .btn-primary {
-    background: var(--black);
-    border-color: var(--black);
+    background: var(--accent);
+    border-color: var(--accent);
     color: var(--white);
 }
 .btn-primary:hover, .btn-primary:focus {
-    background: var(--gray-900);
-    border-color: var(--gray-900);
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
     color: var(--white);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    box-shadow: 0 4px 16px rgba(99,102,241,0.38);
 }
 
 .btn-secondary {
@@ -258,13 +260,13 @@ body {
 .posting-card:hover,
 .kpi-card:hover {
     box-shadow: var(--shadow-md);
-    border-color: var(--gray-300);
+    border-color: var(--accent-border);
     transform: translateY(-2px);
 }
 
 .ranked-candidate-card:hover {
     box-shadow: var(--shadow-md);
-    border-color: var(--gray-300);
+    border-color: var(--accent-border);
 }
 
 /* ============================================================
@@ -276,7 +278,7 @@ body {
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--gray-500);
+    color: var(--accent);
     margin-bottom: 4px;
 }
 
@@ -297,7 +299,8 @@ body {
 .dashboard-hero,
 .job-detail-header,
 .results-header {
-    background: radial-gradient(ellipse at 75% 30%, rgba(255,255,255,0.05) 0%, transparent 55%),
+    background: radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.22) 0%, transparent 52%),
+                radial-gradient(ellipse at 10% 80%, rgba(99,102,241,0.10) 0%, transparent 45%),
                 var(--black);
     border-radius: var(--radius-md);
     color: var(--white);
@@ -356,7 +359,8 @@ body {
     margin: 32px 0;
     padding: 52px 48px;
     border-radius: var(--radius-md);
-    background: radial-gradient(ellipse at 75% 30%, rgba(255,255,255,0.05) 0%, transparent 55%),
+    background: radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.22) 0%, transparent 52%),
+                radial-gradient(ellipse at 10% 80%, rgba(99,102,241,0.10) 0%, transparent 45%),
                 var(--black);
     color: var(--white);
 }
@@ -607,11 +611,11 @@ input[type="file"] {
 textarea:focus,
 input[type="text"]:focus {
     outline: none;
-    border-color: var(--black);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.07);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
 }
 
-textarea { min-height: 160px; resize: vertical; }
+textarea { min-height: 240px; resize: vertical; }
 
 .file-zone {
     background: var(--gray-50);
@@ -742,8 +746,25 @@ textarea { min-height: 160px; resize: vertical; }
     display: grid;
     gap: 20px;
     align-items: start;
-    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-columns: 1fr;
     margin-bottom: 40px;
+}
+
+.job-review-grid.two-col {
+    grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.pool-analysis-panel {
+    position: sticky;
+    top: 20px;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    padding: 24px;
+}
+
+.pool-analysis-panel .skill-gap-grid {
+    grid-template-columns: 1fr;
 }
 
 .job-summary-panel { padding: 28px; }
@@ -769,18 +790,24 @@ textarea { min-height: 160px; resize: vertical; }
 /* ============================================================
    JOB DESCRIPTION DROPDOWN
    ============================================================ */
+
 .job-description-dropdown {
-    margin-bottom: 20px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
+    width: 100%;
+    margin-top: 18px;
+    margin-bottom: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     overflow: hidden;
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .job-description-dropdown summary {
-    padding: 11px 16px;
+    width: 100%;
+    padding: 14px 18px;
     background: var(--gray-50);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     outline: none;
     list-style: none;
@@ -792,21 +819,170 @@ textarea { min-height: 160px; resize: vertical; }
     transition: background var(--t);
 }
 
-.job-description-dropdown summary:hover { background: var(--gray-100); }
+.job-description-dropdown summary:hover {
+    background: var(--gray-100);
+}
 
 .job-description-dropdown summary::after {
     content: '▼';
-    font-size: 0.65rem;
-    opacity: 0.4;
-    transition: transform 0.2s ease;
+    font-size: 0.7rem;
+    opacity: 0.5;
+    transition: transform 0.25s ease;
 }
 
-.job-description-dropdown[open] summary::after { transform: rotate(180deg); }
+.job-description-dropdown[open] summary::after {
+    transform: rotate(180deg);
+}
 
 .description-content {
-    padding: 18px;
+    padding: 28px 32px;
     border-top: 1px solid var(--border);
+    background: var(--white);
+    line-height: 1.7;
+    color: var(--gray-700);
 }
+
+/* INSIDE DARK HEADER CARD */
+.job-detail-header .job-description-dropdown {
+    width: 100%;
+    max-width: 100%;
+    grid-column: 1 / -1;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+}
+
+.job-detail-header .job-description-dropdown summary {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.9);
+    padding: 16px 22px;
+    font-size: 0.95rem;
+}
+
+.job-detail-header .job-description-dropdown summary:hover {
+    background: rgba(255,255,255,0.11);
+}
+
+.job-detail-header .description-content {
+    background: var(--white);
+    color: var(--gray-700);
+}
+
+
+/* Detected skills strip in dark header */
+.header-detected-skills { margin-top: 18px; }
+
+.header-detected-skills .skill-list { max-width: 100%; }
+
+.skills-eyebrow {
+    display: block;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.38);
+    margin-bottom: 8px;
+}
+
+.muted-dim { color: rgba(255,255,255,0.35); font-size: 0.85rem; }
+
+.job-detail-header .skill-tag {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.14);
+}
+
+/* ============================================================
+   SKILL GAP COVERAGE
+   ============================================================ */
+.skill-gap-section {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    padding: 28px;
+    margin-bottom: 20px;
+}
+
+.skill-gap-subtitle {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    margin: -8px 0 22px;
+}
+
+.skill-gap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px 24px;
+}
+
+.skill-gap-item {
+    display: grid;
+    gap: 5px;
+}
+
+.skill-gap-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.skill-gap-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.skill-gap-count {
+    font-size: 0.74rem;
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.skill-gap-bar-track {
+    height: 7px;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.skill-gap-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+}
+
+.skill-gap-pct {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* ============================================================
+   RANK BADGE
+   ============================================================ */
+.rank-badge {
+    flex-shrink: 0;
+    align-self: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1.5px solid var(--accent-border);
+}
+
+.rank-1 { background: #fef9c3; color: #a16207; border-color: #fde047; }
+.rank-2 { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.rank-3 { background: #fff4ed; color: #c2410c; border-color: #fdba74; }
 
 /* ============================================================
    RANKED CANDIDATES
@@ -828,22 +1004,32 @@ textarea { min-height: 160px; resize: vertical; }
 .ranked-candidate-main {
     align-items: center;
     display: flex;
-    gap: 18px;
-    justify-content: space-between;
+    gap: 16px;
 }
 
-.ranked-candidate-main h3 {
+.ranked-candidate-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ranked-candidate-info h3 {
     color: var(--black);
     font-size: 1rem;
     font-weight: 700;
-    margin: 0 0 6px;
+    margin: 0 0 5px;
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.ranked-candidate-main p {
+.ranked-candidate-info p {
     color: var(--gray-400);
     margin: 0;
     font-size: 0.84rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Circular score ring (replaces flat .match-score box) */
@@ -852,6 +1038,7 @@ textarea { min-height: 160px; resize: vertical; }
     width: 92px;
     height: 92px;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .score-ring-svg {
@@ -1688,7 +1875,10 @@ main.dashboard-shell { padding-top: 32px; padding-bottom: 64px; }
     .hero-grid,
     .info-columns,
     .form-row,
-    .job-review-grid { grid-template-columns: 1fr; }
+    .job-review-grid,
+    .job-review-grid.two-col { grid-template-columns: 1fr; }
+
+    .pool-analysis-panel { position: static; }
 
     .kpi-ribbon { grid-template-columns: repeat(2, 1fr); }
 
