@@ -32,6 +32,7 @@ DATABASE = os.path.join(BASE_DIR, "hiring_dashboard.db")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
 # Load spaCy model only if available
 if spacy:
     try:
@@ -130,7 +131,7 @@ TECH_PATTERNS = [
     r'\btransformer\b',
     r'\byolo\b',
 
-    r'\btensorflow\b',
+    r'\btensorsource .venv/bin/activateflow\b',
     r'\bpytorch\b',
     r'\bkeras\b',
     r'\bscikit[- ]learn\b',
