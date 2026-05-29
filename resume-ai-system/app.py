@@ -7,8 +7,11 @@ try:
     import spacy
 except Exception:
     spacy = None
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+try:
+    from sentence_transformers import SentenceTransformer, util as st_util
+    _bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+except Exception:
+    _bert_model = None
 import json
 import os
 import sqlite3
@@ -737,14 +740,20 @@ def calculate_combined_score(resume_text, job_description, required_skills):
     missing = sorted(skill for skill in required_skills if skill not in resume_text)
     keyword_score = (len(matched) / len(required_skills)) * 100 if required_skills else 0
 
-    # TF-IDF similarity score
-    documents = [resume_text, job_description.lower()]
-    vectorizer = TfidfVectorizer(stop_words="english")
-    tfidf_matrix = vectorizer.fit_transform(documents)
-    tfidf_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0] * 100
+    # BERT semantic similarity score
+    if _bert_model is not None:
+        embeddings = _bert_model.encode([resume_text, job_description.lower()])
+        semantic_score = float(st_util.cos_sim(embeddings[0], embeddings[1])) * 100
+    else:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        documents = [resume_text, job_description.lower()]
+        vectorizer = TfidfVectorizer(stop_words="english")
+        tfidf_matrix = vectorizer.fit_transform(documents)
+        semantic_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0] * 100
 
     # Combine both into one score (tune weights as needed)
-    combined_score = (0.6 * keyword_score) + (0.4 * tfidf_score)
+    combined_score = (0.6 * keyword_score) + (0.4 * semantic_score)
 
     return round(combined_score, 2), matched, missing
 

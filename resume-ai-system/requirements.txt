@@ -8,3 +8,4 @@ google-api-core
 python-dotenv
 gunicorn
 Werkzeug
+sentence-transformers
