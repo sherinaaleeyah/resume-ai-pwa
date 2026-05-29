@@ -50,30 +50,30 @@
       <div class="form-row">
         <div class="form-group">
           <label>Full Name</label>
-          <input type="text" name="full_name" placeholder="Example: Aiman Hakimi" required>
+          <input type="text" name="full_name" value="Aiman Hakimi" required>
         </div>
 
         <div class="form-group">
           <label>Email Address</label>
-          <input type="email" name="email" placeholder="Example: aiman@email.com" required>
+          <input type="email" name="email" value="aiman@email.com" required>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>Phone Number</label>
-          <input type="text" name="phone" placeholder="Example: 012-3456789">
+          <input type="text" name="phone" value="012-3456789">
         </div>
 
         <div class="form-group">
           <label>Location</label>
-          <input type="text" name="location" placeholder="Example: Kuala Lumpur, Malaysia">
+          <input type="text" name="location" value="Kuala Lumpur, Malaysia">
         </div>
       </div>
 
       <div class="form-group">
         <label>Target Role</label>
-        <input type="text" name="target_role" placeholder="Example: Software Engineer">
+        <input type="text" name="target_role" value="Software Engineer">
       </div>
 
       <div class="form-group">
@@ -81,8 +81,7 @@
         <textarea 
             id="target_job_description"
             name="target_job_description" 
-            rows="7" 
-            placeholder="Paste the job description here. The system will compare your generated resume with this job description to calculate score, missing skills, and skill gaps."></textarea>
+            rows="7">We are looking for a Software Engineer to design, develop, test, and maintain web applications. The candidate should have experience with Python, JavaScript, SQL, REST API development, Git, and database management. Knowledge of Flask, Django, React, HTML, CSS, and Bootstrap is an advantage. The role requires strong problem-solving skills, debugging skills, and the ability to work in a team. Familiarity with software testing, cloud platforms, Docker, and agile development is preferred.</textarea>
         <small>This helps the system identify skill gaps and suggest improvements based on the job you are applying for.</small>
       </div>
 
@@ -90,7 +89,7 @@
 
       <div class="form-group">
         <label>Write 2-3 sentences about yourself</label>
-        <textarea name="summary" rows="4" placeholder="Example: Computer Science student with experience in web development, Python, Flask, and database systems. Interested in building scalable software solutions."></textarea>
+        <textarea name="summary" rows="4">Computer Science student with experience in web application development, backend programming, and database management. Skilled in Python, JavaScript, SQL, Flask, and Git, with interest in building scalable and user-friendly software systems.</textarea>
       </div>
 
       <h3>Skills</h3>
@@ -344,10 +343,52 @@
     document.getElementById("certifications_json").value = JSON.stringify(certifications);
   }
 
-  addExperience();
-  addEducation();
-  addProject();
-  addCertification();
+  // Demo data for FYP prototype showcase
+  window.addEventListener("load", function () {
+    skills = [
+      "Python",
+      "JavaScript",
+      "SQL",
+      "Flask",
+      "HTML",
+      "CSS",
+      "Bootstrap",
+      "Git",
+      "GitHub",
+      "REST API",
+      "MySQL",
+      "Problem Solving",
+      "Debugging",
+      "Software Testing"
+    ];
+    renderSkills();
+
+    addExperience();
+    const expBlock = document.querySelector(".experience-block");
+    expBlock.querySelector(".exp-company").value = "TechNova Solutions";
+    expBlock.querySelector(".exp-role").value = "Software Development Intern";
+    expBlock.querySelector(".exp-period").value = "June 2025 - September 2025";
+    expBlock.querySelector(".exp-description").value = "I helped develop internal web applications using Python, Flask, HTML, CSS, and JavaScript. I worked with SQL databases to store and retrieve user data. I fixed bugs reported by users and tested features before deployment. I also used GitHub to collaborate with other developers and manage code changes.";
+
+    addEducation();
+    const eduBlock = document.querySelector(".education-block");
+    eduBlock.querySelector(".edu-school").value = "International Islamic University Malaysia";
+    eduBlock.querySelector(".edu-degree").value = "Bachelor of Computer Science";
+    eduBlock.querySelector(".edu-period").value = "2022 - 2026";
+
+    addProject();
+    const projectBlock = document.querySelector(".project-block");
+    projectBlock.querySelector(".project-title").value = "AI-Based Resume Screening System";
+    projectBlock.querySelector(".project-tools").value = "Python, Flask, NLP, TF-IDF, Cosine Similarity, Bootstrap, SQLite";
+    projectBlock.querySelector(".project-description").value = "Developed a web-based resume screening system that compares resumes with job descriptions. The system extracts resume text, identifies matched and missing skills, calculates match scores, and displays ranking results.";
+
+    addCertification();
+    const certBlock = document.querySelector(".certification-block");
+    certBlock.querySelector(".cert-name").value = "Python for Everybody";
+    certBlock.querySelector(".cert-provider").value = "University of Michigan, Coursera";
+    certBlock.querySelector(".cert-year").value = "2024";
+  });
+
 </script>
 
 </body>
