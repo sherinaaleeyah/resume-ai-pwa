@@ -3,20 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resume Analysis Results - Resume AI</title>
+  <title>Resume Analysis Results - TalentMatch</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <style>
+    /* ── Score ring (full circle, score inside) ── */
+    .score-ring-wrap {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      flex-shrink: 0;
+    }
+    .score-ring-wrap svg {
+      width: 150px;
+      height: 150px;
+      transform: rotate(-90deg); /* start arc from top */
+    }
+    .score-ring-track {
+      fill: none;
+      stroke: rgba(255,255,255,0.12);
+      stroke-width: 10;
+    }
+    .score-ring-fill {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 0 408;
+      transition: stroke-dasharray 1.1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+    }
+    .score-ring-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .score-ring-num {
+      font-size: 2.4rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      /* colour set by JS */
+    }
+    .score-ring-pct {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.45);
+    }
+    .score-ring-band {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      margin-top: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── AI Feedback structured cards ── */
+    .feedback-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .feedback-card {
+      background: var(--gray-50);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feedback-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feedback-card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-xs);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .feedback-card-icon.good   { background: #f0fdf4; color: #15803d; }
+    .feedback-card-icon.warn   { background: #fff7ed; color: #c2410c; }
+    .feedback-card-icon.tip    { background: var(--accent-light); color: var(--accent); }
+    .feedback-card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .feedback-points {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 7px;
+    }
+    .feedback-points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.875rem;
+      color: var(--gray-600);
+      line-height: 1.55;
+    }
+    .feedback-points li i {
+      font-size: 0.7rem;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .fp-good { color: #15803d; }
+    .fp-warn { color: #c2410c; }
+    .fp-tip  { color: var(--accent); }
+    /* Fallback: plain paragraph if JS can't parse */
+    .feedback-raw {
+      font-size: 0.9rem;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+  </style>
 </head>
 <body>
+
   <nav class="navbar navbar-expand-lg app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
         <span class="navbar-brand"><i class="fa-solid fa-wand-magic-sparkles"></i> TalentMatch</span>
         <span class="nav-mode-pill">Job Seeker</span>
       </div>
-      <a href="/job_seeker" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <a href="/job_seeker" class="btn btn-outline-light btn-sm">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
     </div>
   </nav>
 
@@ -24,54 +156,155 @@
 
     {% if error %}
 
-      <section class="workbench">
+      <section class="workbench" style="margin-top: 32px;">
         <h2>Error</h2>
         <p>{{ error }}</p>
       </section>
 
     {% else %}
 
+      {% set _s = score | float %}
+      {% if _s >= 85 %}
+        {% set _band = 'Excellent Match' %}
+      {% elif _s >= 70 %}
+        {% set _band = 'Good Match' %}
+      {% elif _s >= 55 %}
+        {% set _band = 'Fair Match' %}
+      {% elif _s >= 40 %}
+        {% set _band = 'Weak Match' %}
+      {% else %}
+        {% set _band = 'Poor Match' %}
+      {% endif %}
+
+      <!-- Results Header with ring score -->
       <section class="results-header">
         <div>
           <span class="eyebrow">Resume Match Analysis</span>
           <h1>Your Resume Match Score</h1>
-          <p>This score is calculated using skill matching and resume-job description similarity.</p>
+          <p>Calculated using skill matching and resume-to-job description similarity.</p>
         </div>
 
-        {% set _s = score | float %}
-        {% if _s >= 85 %}
-          {% set _bg = 'rgba(34,197,94,0.15)'  %}{% set _bdr = 'rgba(34,197,94,0.4)'  %}{% set _clr = '#4ade80' %}
-        {% elif _s >= 70 %}
-          {% set _bg = 'rgba(13,148,136,0.15)' %}{% set _bdr = 'rgba(13,148,136,0.4)' %}{% set _clr = '#2dd4bf' %}
-        {% elif _s >= 55 %}
-          {% set _bg = 'rgba(245,158,11,0.15)' %}{% set _bdr = 'rgba(245,158,11,0.4)' %}{% set _clr = '#fbbf24' %}
-        {% elif _s >= 40 %}
-          {% set _bg = 'rgba(249,115,22,0.15)' %}{% set _bdr = 'rgba(249,115,22,0.4)' %}{% set _clr = '#fb923c' %}
-        {% else %}
-          {% set _bg = 'rgba(239,68,68,0.15)'  %}{% set _bdr = 'rgba(239,68,68,0.4)'  %}{% set _clr = '#f87171' %}
-        {% endif %}
-        <div class="shortlist-card" style="background: {{ _bg }} !important; border-color: {{ _bdr }} !important;">
-          <strong style="color: {{ _clr }};">{{ score }}%</strong>
-          <span>Match Score</span>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div class="score-ring-wrap">
+            <!-- r=65 → circumference = 2π×65 ≈ 408.41 -->
+            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+              <circle class="score-ring-track" cx="75" cy="75" r="65"/>
+              <circle class="score-ring-fill" id="score-ring-fill" cx="75" cy="75" r="65"/>
+            </svg>
+            <div class="score-ring-inner">
+              <span class="score-ring-num" id="score-ring-num">{{ score }}</span>
+              <span class="score-ring-pct">Match %</span>
+            </div>
+          </div>
+          <div class="score-ring-band">{{ _band }}</div>
         </div>
       </section>
 
+      <script>
+        (function () {
+          var score = {{ _s }};
+          var pct   = Math.min(Math.max(score, 0), 100) / 100;
+          var circ  = 408.41; /* 2 * π * 65 */
+
+          var colour;
+          if      (score >= 85) colour = "#22c55e";
+          else if (score >= 70) colour = "#84cc16";
+          else if (score >= 55) colour = "#f59e0b";
+          else if (score >= 40) colour = "#f97316";
+          else                  colour = "#ef4444";
+
+          setTimeout(function () {
+            var ring = document.getElementById("score-ring-fill");
+            var num  = document.getElementById("score-ring-num");
+            if (ring) {
+              ring.style.stroke           = colour;
+              ring.style.strokeDasharray  = (pct * circ) + " " + circ;
+            }
+            if (num) { num.style.color = colour; }
+          }, 80);
+        })();
+      </script>
+
+      <!-- AI Feedback — structured -->
       <section class="workbench">
         <div class="section-heading">
           <span class="eyebrow">Explainable AI</span>
           <h2>AI Explanation and Improvement Advice</h2>
         </div>
-        <p>{{ ai_feedback }}</p>
+
+        <!-- Raw text hidden; JS parses it into cards -->
+        <p id="ai-feedback-raw" class="feedback-raw" style="display:none;">{{ ai_feedback }}</p>
+        <div id="ai-feedback-structured" class="feedback-grid"></div>
+
+        <!-- Fallback shown until JS runs -->
+        <p id="ai-feedback-fallback" class="feedback-raw">{{ ai_feedback }}</p>
       </section>
 
-      <section class="content-grid">
+      <script>
+        (function () {
+          var raw      = document.getElementById("ai-feedback-raw");
+          var grid     = document.getElementById("ai-feedback-structured");
+          var fallback = document.getElementById("ai-feedback-fallback");
+          if (!raw || !grid) return;
+
+          var text = raw.textContent.trim();
+          if (!text) return;
+
+          /* Split into individual sentences */
+          var sentences = text
+            .replace(/([.!?])\s+/g, "$1\n")
+            .split("\n")
+            .map(function(s){ return s.trim(); })
+            .filter(function(s){ return s.length > 8; });
+
+          if (sentences.length < 2) return; /* too short to structure */
+
+          /* Classify each sentence */
+          var goodKw  = /strong|good|well|excel|great|solid|demonstrat|relevant|match|align|has|skilled|proficien|cover|includ|found|show|present/i;
+          var warnKw  = /miss|lack|gap|not|no |without|absent|weak|improv|add|should|need|consider|recommend|suggest|however|but |although|unfortunately|limited/i;
+          var tipKw   = /tip|advice|suggest|recommend|could|would benefit|try|ensure|make sure|tailor|customis|customize|optim|highlight|focus|includ/i;
+
+          var good = [], warn = [], tips = [];
+          sentences.forEach(function(s) {
+            if (tipKw.test(s))       tips.push(s);
+            else if (warnKw.test(s)) warn.push(s);
+            else if (goodKw.test(s)) good.push(s);
+            else                     tips.push(s); /* default bucket */
+          });
+
+          /* Build HTML */
+          function makeCard(title, iconCls, iconType, points, ptClass, iCls) {
+            if (!points.length) return "";
+            var items = points.map(function(p) {
+              return '<li><i class="' + iCls + ' ' + ptClass + '"></i>' + p + '</li>';
+            }).join("");
+            return '<div class="feedback-card">'
+              + '<div class="feedback-card-header">'
+              + '<div class="feedback-card-icon ' + iconType + '"><i class="' + iconCls + '"></i></div>'
+              + '<span class="feedback-card-title">' + title + '</span>'
+              + '</div>'
+              + '<ul class="feedback-points">' + items + '</ul>'
+              + '</div>';
+          }
+
+          var html =
+            makeCard("What's Working",   "fa-solid fa-circle-check",           "good", good, "fp-good", "fa-solid fa-check") +
+            makeCard("Gaps & Weaknesses","fa-solid fa-triangle-exclamation",   "warn", warn, "fp-warn", "fa-solid fa-xmark") +
+            makeCard("Recommendations",  "fa-solid fa-lightbulb",              "tip",  tips, "fp-tip",  "fa-solid fa-arrow-right");
+
+          if (html.trim()) {
+            grid.innerHTML = html;
+            fallback.style.display = "none";
+          }
+        })();
+      </script>
+
+      <!-- Matched / Missing Skills -->
+      <div class="content-grid">
 
         <article>
-          <div class="icon-chip">
-            <i class="fa-solid fa-circle-check"></i>
-          </div>
+          <div class="icon-chip"><i class="fa-solid fa-circle-check"></i></div>
           <h3>Matched Skills</h3>
-
           <div class="skill-list">
             {% if matched %}
               {% for skill in matched %}
@@ -84,11 +317,8 @@
         </article>
 
         <article>
-          <div class="icon-chip">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-          </div>
+          <div class="icon-chip"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <h3>Missing Skills / Skill Gaps</h3>
-
           <div class="skill-list">
             {% if missing %}
               {% for skill in missing %}
@@ -100,39 +330,41 @@
           </div>
         </article>
 
-      </section>
+      </div>
 
+      <!-- ATS Structure Check -->
       <section class="workbench">
         <div class="section-heading">
           <span class="eyebrow">ATS Structure Check</span>
           <h2>Resume Section Analysis</h2>
         </div>
 
-        <table class="table align-middle">
-          <thead>
-            <tr>
-              <th>Section</th>
-              <th>Status</th>
-              <th>Feedback</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {% for item in ats_feedback %}
-            <tr>
-              <td>{{ item.section }}</td>
-              <td>
-                {% if item.status == "Detected" %}
-                  <span class="status status-good">Detected</span>
-                {% else %}
-                  <span class="status status-review">Missing</span>
-                {% endif %}
-              </td>
-              <td>{{ item.message }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>Status</th>
+                <th>Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in ats_feedback %}
+              <tr>
+                <td>{{ item.section }}</td>
+                <td>
+                  {% if item.status == "Detected" %}
+                    <span class="status status-good">Detected</span>
+                  {% else %}
+                    <span class="status status-review">Missing</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.message }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </section>
 
     {% endif %}
