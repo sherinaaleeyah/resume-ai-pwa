@@ -8,6 +8,191 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <style>
+    /* ── Builder two-column layout ── */
+    .builder-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 28px;
+      align-items: start;
+    }
+    .builder-preview-col {
+      position: sticky;
+      top: 76px;
+      max-height: calc(100vh - 96px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .builder-preview-col::-webkit-scrollbar { width: 4px; }
+    .builder-preview-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Preview panel header ── */
+    .preview-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 12px;
+      background: var(--gray-900);
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      border: 1.5px solid var(--border);
+      border-bottom: none;
+    }
+    .preview-panel-header .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+    }
+    .preview-pulse {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      font-weight: 600;
+    }
+    .preview-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── Resume document (compact preview version) ── */
+    .builder-resume-doc {
+      background: var(--white);
+      color: var(--black);
+      padding: 28px 30px;
+      border: 1.5px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    .builder-resume-doc .resume-header {
+      text-align: center;
+      border-bottom: 1.5px solid var(--black);
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .builder-resume-doc .resume-header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -0.02em;
+    }
+    .builder-resume-doc .resume-header .contact-line {
+      margin: 5px 0 0;
+      font-size: 0.78rem;
+      color: var(--gray-500);
+    }
+    .builder-resume-doc .resume-header .role-line {
+      margin: 3px 0 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .builder-resume-doc .resume-section {
+      margin-bottom: 16px;
+    }
+    .builder-resume-doc .resume-section h2 {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--black);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+    .builder-resume-doc .resume-section p {
+      margin: 0;
+      font-size: 0.82rem;
+      white-space: pre-line;
+      color: var(--gray-800);
+    }
+
+    /* ── Preview entry (experience / education / project / cert) ── */
+    .preview-entry { margin-bottom: 10px; }
+    .preview-entry:last-child { margin-bottom: 0; }
+    .preview-entry-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .preview-entry-head strong {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--black);
+    }
+    .preview-entry-head span {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .preview-entry-sub {
+      font-size: 0.77rem;
+      color: var(--gray-500);
+      margin: 1px 0 3px;
+      font-style: italic;
+    }
+    .preview-entry-desc {
+      font-size: 0.79rem;
+      color: var(--gray-700);
+      white-space: pre-line;
+      margin: 3px 0 0;
+    }
+
+    /* ── Skills in preview ── */
+    .preview-skill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .preview-skill-tag {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      font-size: 0.73rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--radius-xs);
+    }
+
+    /* ── Empty state ── */
+    .preview-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      gap: 10px;
+      color: var(--gray-300);
+    }
+    .preview-empty i { font-size: 1.8rem; }
+    .preview-empty p { margin: 0; font-size: 0.82rem; }
+
+    /* ── Responsive: stack below 1060px ── */
+    @media (max-width: 1059px) {
+      .builder-layout {
+        grid-template-columns: 1fr;
+      }
+      .builder-preview-col {
+        position: static;
+        max-height: none;
+        order: -1;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -31,160 +216,185 @@
     <div>
       <span class="eyebrow">Resume Builder</span>
       <h1>Build an ATS-friendly resume with AI.</h1>
-      <p>Fill in the sections below. The system will improve your summary, generate resume-style bullets, calculate a score, and suggest improvements.</p>
+      <p>Fill in the sections below. The preview updates live as you type. Submit to let AI enhance your summary, generate bullet points, and score your resume.</p>
     </div>
   </section>
 
-  <form id="generate-resume-form" action="/generate_resume" method="post" class="upload-form" onsubmit="prepareResumeData()">
+  <!-- Two-column layout: form + live preview -->
+  <div class="builder-layout">
 
-    <!-- Personal Information -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 1</span>
-        <h2>Personal Information</h2>
+    <!-- ── Left: Form ── -->
+    <div class="builder-form-col">
+      <form id="generate-resume-form" action="/generate_resume" method="post" class="upload-form" onsubmit="prepareResumeData()">
+
+        <!-- Personal Information -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 1</span>
+            <h2>Personal Information</h2>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="full_name">Full Name</label>
+              <input type="text" id="full_name" name="full_name" placeholder="Aiman Hakimi" required>
+            </div>
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" placeholder="aiman@email.com" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="text" id="phone" name="phone" placeholder="012-3456789">
+            </div>
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" name="location" placeholder="Kuala Lumpur, Malaysia">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="target_role">Target Role</label>
+            <input type="text" id="target_role" name="target_role" placeholder="Software Engineer">
+          </div>
+        </section>
+
+        <!-- Target Job Description -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 2</span>
+            <h2>Target Job Description</h2>
+          </div>
+          <div class="form-group">
+            <label for="target_job_description">Job Description</label>
+            <textarea
+              id="target_job_description"
+              name="target_job_description"
+              rows="7"
+              placeholder="Paste the job description here. This helps the system identify skill gaps and suggest improvements based on the role you are applying for."></textarea>
+            <small style="color: var(--gray-400); font-size: 0.82rem;">
+              This helps the system identify skill gaps and suggest improvements based on the role you are applying for.
+            </small>
+          </div>
+        </section>
+
+        <!-- Professional Summary -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 3</span>
+            <h2>Professional Summary</h2>
+          </div>
+          <div class="form-group">
+            <label for="summary">Write 2–3 sentences about yourself</label>
+            <textarea id="summary" name="summary" rows="4" placeholder="Briefly describe your background, key skills, and what you bring to the role."></textarea>
+          </div>
+        </section>
+
+        <!-- Skills -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 4</span>
+            <h2>Skills</h2>
+          </div>
+          <div class="inline-add">
+            <input type="text" id="skillInput" placeholder="Example: Python">
+            <button type="button" class="btn btn-primary" onclick="addSkill()">
+              <i class="fa-solid fa-plus"></i> Add
+            </button>
+          </div>
+          <div id="skillsList" class="builder-tag-list"></div>
+        </section>
+
+        <!-- Work Experience -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 5</span>
+            <h2>Work Experience</h2>
+          </div>
+          <div id="experienceContainer"></div>
+          <button type="button" class="btn btn-outline-primary" onclick="addExperience()">
+            <i class="fa-solid fa-plus"></i> Add Experience
+          </button>
+        </section>
+
+        <!-- Education -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 6</span>
+            <h2>Education</h2>
+          </div>
+          <div id="educationContainer"></div>
+          <button type="button" class="btn btn-outline-primary" onclick="addEducation()">
+            <i class="fa-solid fa-plus"></i> Add Education
+          </button>
+        </section>
+
+        <!-- Projects -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 7</span>
+            <h2>Projects</h2>
+          </div>
+          <div id="projectContainer"></div>
+          <button type="button" class="btn btn-outline-primary" onclick="addProject()">
+            <i class="fa-solid fa-plus"></i> Add Project
+          </button>
+        </section>
+
+        <!-- Certifications -->
+        <section class="workbench">
+          <div class="section-heading">
+            <span class="eyebrow">Step 8</span>
+            <h2>Certifications</h2>
+          </div>
+          <div id="certificationContainer"></div>
+          <button type="button" class="btn btn-outline-primary" onclick="addCertification()">
+            <i class="fa-solid fa-plus"></i> Add Certification
+          </button>
+        </section>
+
+        <!-- Hidden fields -->
+        <input type="hidden" name="skills_json"         id="skills_json">
+        <input type="hidden" name="experiences_json"    id="experiences_json">
+        <input type="hidden" name="educations_json"     id="educations_json">
+        <input type="hidden" name="projects_json"       id="projects_json">
+        <input type="hidden" name="certifications_json" id="certifications_json">
+
+        <!-- Submit -->
+        <section class="workbench" style="margin-bottom: 40px;">
+          <p style="color: var(--gray-500); font-size: 0.9rem; margin: 0 0 20px;">
+            Once you submit, the AI will organise your information, improve your summary,
+            generate resume-style bullet points, and calculate your match score.
+          </p>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Resume with AI
+          </button>
+        </section>
+
+      </form>
+    </div><!-- /.builder-form-col -->
+
+    <!-- ── Right: Live Preview ── -->
+    <div class="builder-preview-col">
+      <div class="preview-panel-header">
+        <span class="label">Live Preview</span>
+        <span class="preview-pulse">
+          <span class="preview-pulse-dot"></span>
+          Updates as you type
+        </span>
       </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="full_name">Full Name</label>
-          <input type="text" id="full_name" name="full_name" placeholder="Aiman Hakimi" required>
+      <div id="live-resume-preview" class="builder-resume-doc">
+        <div class="preview-empty">
+          <i class="fa-regular fa-file-lines"></i>
+          <p>Your resume preview will appear here as you fill in the sections.</p>
         </div>
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="aiman@email.com" required>
-        </div>
       </div>
+    </div><!-- /.builder-preview-col -->
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="phone">Phone Number</label>
-          <input type="text" id="phone" name="phone" placeholder="012-3456789">
-        </div>
-        <div class="form-group">
-          <label for="location">Location</label>
-          <input type="text" id="location" name="location" placeholder="Kuala Lumpur, Malaysia">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="target_role">Target Role</label>
-        <input type="text" id="target_role" name="target_role" placeholder="Software Engineer">
-      </div>
-    </section>
-
-    <!-- Target Job Description -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 2</span>
-        <h2>Target Job Description</h2>
-      </div>
-      <div class="form-group">
-        <label for="target_job_description">Job Description</label>
-        <textarea
-          id="target_job_description"
-          name="target_job_description"
-          rows="7"
-          placeholder="Paste the job description here. This helps the system identify skill gaps and suggest improvements based on the role you are applying for."></textarea>
-        <small style="color: var(--gray-400); font-size: 0.82rem;">
-          This helps the system identify skill gaps and suggest improvements based on the role you are applying for.
-        </small>
-      </div>
-    </section>
-
-    <!-- Professional Summary -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 3</span>
-        <h2>Professional Summary</h2>
-      </div>
-      <div class="form-group">
-        <label for="summary">Write 2–3 sentences about yourself</label>
-        <textarea id="summary" name="summary" rows="4" placeholder="Briefly describe your background, key skills, and what you bring to the role."></textarea>
-      </div>
-    </section>
-
-    <!-- Skills -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 4</span>
-        <h2>Skills</h2>
-      </div>
-      <div class="inline-add">
-        <input type="text" id="skillInput" placeholder="Example: Python">
-        <button type="button" class="btn btn-primary" onclick="addSkill()">
-          <i class="fa-solid fa-plus"></i> Add
-        </button>
-      </div>
-      <div id="skillsList" class="builder-tag-list"></div>
-    </section>
-
-    <!-- Work Experience -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 5</span>
-        <h2>Work Experience</h2>
-      </div>
-      <div id="experienceContainer"></div>
-      <button type="button" class="btn btn-outline-primary" onclick="addExperience()">
-        <i class="fa-solid fa-plus"></i> Add Experience
-      </button>
-    </section>
-
-    <!-- Education -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 6</span>
-        <h2>Education</h2>
-      </div>
-      <div id="educationContainer"></div>
-      <button type="button" class="btn btn-outline-primary" onclick="addEducation()">
-        <i class="fa-solid fa-plus"></i> Add Education
-      </button>
-    </section>
-
-    <!-- Projects -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 7</span>
-        <h2>Projects</h2>
-      </div>
-      <div id="projectContainer"></div>
-      <button type="button" class="btn btn-outline-primary" onclick="addProject()">
-        <i class="fa-solid fa-plus"></i> Add Project
-      </button>
-    </section>
-
-    <!-- Certifications -->
-    <section class="workbench">
-      <div class="section-heading">
-        <span class="eyebrow">Step 8</span>
-        <h2>Certifications</h2>
-      </div>
-      <div id="certificationContainer"></div>
-      <button type="button" class="btn btn-outline-primary" onclick="addCertification()">
-        <i class="fa-solid fa-plus"></i> Add Certification
-      </button>
-    </section>
-
-    <!-- Hidden fields -->
-    <input type="hidden" name="skills_json"         id="skills_json">
-    <input type="hidden" name="experiences_json"    id="experiences_json">
-    <input type="hidden" name="educations_json"     id="educations_json">
-    <input type="hidden" name="projects_json"       id="projects_json">
-    <input type="hidden" name="certifications_json" id="certifications_json">
-
-    <!-- Submit -->
-    <section class="workbench" style="margin-bottom: 40px;">
-      <p style="color: var(--gray-500); font-size: 0.9rem; margin: 0 0 20px;">
-        Once you submit, the AI will organise your information, improve your summary,
-        generate resume-style bullet points, and calculate your match score.
-      </p>
-      <button type="submit" class="btn btn-primary">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Resume with AI
-      </button>
-    </section>
-
-  </form>
+  </div><!-- /.builder-layout -->
 
 </main>
 
@@ -200,30 +410,38 @@
 <script>
   let skills = [];
 
+  /* ── HTML escape helper ── */
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── Skills ── */
   function addSkill() {
-    const input = document.getElementById("skillInput");
+    const input = document.getElementById('skillInput');
     const skill = input.value.trim();
     if (skill && !skills.includes(skill)) {
       skills.push(skill);
-      input.value = "";
+      input.value = '';
       renderSkills();
+      updatePreview();
     }
   }
 
-  document.getElementById("skillInput").addEventListener("keydown", function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addSkill();
-    }
+  document.getElementById('skillInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addSkill(); }
   });
 
   function renderSkills() {
-    const list = document.getElementById("skillsList");
-    list.innerHTML = "";
+    const list = document.getElementById('skillsList');
+    list.innerHTML = '';
     skills.forEach((skill, index) => {
-      const tag = document.createElement("span");
-      tag.className = "builder-tag";
-      tag.innerHTML = `${skill} <button type="button" onclick="removeSkill(${index})">×</button>`;
+      const tag = document.createElement('span');
+      tag.className = 'builder-tag';
+      tag.innerHTML = `${escHtml(skill)} <button type="button" onclick="removeSkill(${index})">×</button>`;
       list.appendChild(tag);
     });
   }
@@ -231,14 +449,16 @@
   function removeSkill(index) {
     skills.splice(index, 1);
     renderSkills();
+    updatePreview();
   }
 
+  /* ── Dynamic blocks ── */
   function addExperience() {
-    const container = document.getElementById("experienceContainer");
-    const block = document.createElement("div");
-    block.className = "dynamic-block experience-block";
+    const container = document.getElementById('experienceContainer');
+    const block = document.createElement('div');
+    block.className = 'dynamic-block experience-block';
     block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
       <div class="form-row">
         <div class="form-group">
           <label>Company</label>
@@ -258,14 +478,15 @@
         <textarea class="exp-description" rows="4" placeholder="Write a few sentences. AI will convert this into resume-style bullet points."></textarea>
       </div>`;
     container.appendChild(block);
+    updatePreview();
   }
 
   function addEducation() {
-    const container = document.getElementById("educationContainer");
-    const block = document.createElement("div");
-    block.className = "dynamic-block education-block";
+    const container = document.getElementById('educationContainer');
+    const block = document.createElement('div');
+    block.className = 'dynamic-block education-block';
     block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
       <div class="form-row">
         <div class="form-group">
           <label>School / University</label>
@@ -281,14 +502,15 @@
         <input type="text" class="edu-period" placeholder="Example: 2022 - 2026">
       </div>`;
     container.appendChild(block);
+    updatePreview();
   }
 
   function addProject() {
-    const container = document.getElementById("projectContainer");
-    const block = document.createElement("div");
-    block.className = "dynamic-block project-block";
+    const container = document.getElementById('projectContainer');
+    const block = document.createElement('div');
+    block.className = 'dynamic-block project-block';
     block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
       <div class="form-row">
         <div class="form-group">
           <label>Project Title</label>
@@ -304,14 +526,15 @@
         <textarea class="project-description" rows="4" placeholder="Briefly describe the project, your role, and the outcome."></textarea>
       </div>`;
     container.appendChild(block);
+    updatePreview();
   }
 
   function addCertification() {
-    const container = document.getElementById("certificationContainer");
-    const block = document.createElement("div");
-    block.className = "dynamic-block certification-block";
+    const container = document.getElementById('certificationContainer');
+    const block = document.createElement('div');
+    block.className = 'dynamic-block certification-block';
     block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove()">×</button>
+      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
       <div class="form-row">
         <div class="form-group">
           <label>Certification Name</label>
@@ -327,104 +550,240 @@
         <input type="text" class="cert-year" placeholder="Example: 2025">
       </div>`;
     container.appendChild(block);
+    updatePreview();
   }
 
+  /* ── Live preview renderer ── */
+  function updatePreview() {
+    const name      = document.getElementById('full_name').value.trim();
+    const email     = document.getElementById('email').value.trim();
+    const phone     = document.getElementById('phone').value.trim();
+    const location  = document.getElementById('location').value.trim();
+    const role      = document.getElementById('target_role').value.trim();
+    const summary   = document.getElementById('summary').value.trim();
+
+    const hasContent = name || email || phone || location || role || summary || skills.length;
+
+    if (!hasContent &&
+        !document.querySelectorAll('.experience-block').length &&
+        !document.querySelectorAll('.education-block').length &&
+        !document.querySelectorAll('.project-block').length &&
+        !document.querySelectorAll('.certification-block').length) {
+      document.getElementById('live-resume-preview').innerHTML = `
+        <div class="preview-empty">
+          <i class="fa-regular fa-file-lines"></i>
+          <p>Your resume preview will appear here as you fill in the sections.</p>
+        </div>`;
+      return;
+    }
+
+    /* contact line: join non-empty parts with bullet separator */
+    const contactParts = [email, phone, location].filter(Boolean);
+    const contactLine = contactParts.map(escHtml).join(' &nbsp;·&nbsp; ');
+
+    /* skills */
+    let skillsHtml = '';
+    if (skills.length) {
+      const tags = skills.map(s => `<span class="preview-skill-tag">${escHtml(s)}</span>`).join('');
+      skillsHtml = `
+        <div class="resume-section">
+          <h2>Skills</h2>
+          <div class="preview-skill-list">${tags}</div>
+        </div>`;
+    }
+
+    /* experience */
+    let expHtml = '';
+    document.querySelectorAll('.experience-block').forEach(b => {
+      const company = b.querySelector('.exp-company').value.trim();
+      const expRole = b.querySelector('.exp-role').value.trim();
+      const period  = b.querySelector('.exp-period').value.trim();
+      const desc    = b.querySelector('.exp-description').value.trim();
+      if (!company && !expRole) return;
+      expHtml += `
+        <div class="preview-entry">
+          <div class="preview-entry-head">
+            <strong>${escHtml(expRole || 'Role')}</strong>
+            ${period ? `<span>${escHtml(period)}</span>` : ''}
+          </div>
+          ${company ? `<div class="preview-entry-sub">${escHtml(company)}</div>` : ''}
+          ${desc    ? `<div class="preview-entry-desc">${escHtml(desc)}</div>` : ''}
+        </div>`;
+    });
+
+    /* education */
+    let eduHtml = '';
+    document.querySelectorAll('.education-block').forEach(b => {
+      const school = b.querySelector('.edu-school').value.trim();
+      const degree = b.querySelector('.edu-degree').value.trim();
+      const period = b.querySelector('.edu-period').value.trim();
+      if (!school && !degree) return;
+      eduHtml += `
+        <div class="preview-entry">
+          <div class="preview-entry-head">
+            <strong>${escHtml(degree || 'Degree')}</strong>
+            ${period ? `<span>${escHtml(period)}</span>` : ''}
+          </div>
+          ${school ? `<div class="preview-entry-sub">${escHtml(school)}</div>` : ''}
+        </div>`;
+    });
+
+    /* projects */
+    let projHtml = '';
+    document.querySelectorAll('.project-block').forEach(b => {
+      const title = b.querySelector('.project-title').value.trim();
+      const tools = b.querySelector('.project-tools').value.trim();
+      const desc  = b.querySelector('.project-description').value.trim();
+      if (!title) return;
+      projHtml += `
+        <div class="preview-entry">
+          <div class="preview-entry-head">
+            <strong>${escHtml(title)}</strong>
+          </div>
+          ${tools ? `<div class="preview-entry-sub">${escHtml(tools)}</div>` : ''}
+          ${desc  ? `<div class="preview-entry-desc">${escHtml(desc)}</div>` : ''}
+        </div>`;
+    });
+
+    /* certifications */
+    let certHtml = '';
+    document.querySelectorAll('.certification-block').forEach(b => {
+      const certName  = b.querySelector('.cert-name').value.trim();
+      const provider  = b.querySelector('.cert-provider').value.trim();
+      const year      = b.querySelector('.cert-year').value.trim();
+      if (!certName) return;
+      certHtml += `
+        <div class="preview-entry">
+          <div class="preview-entry-head">
+            <strong>${escHtml(certName)}</strong>
+            ${year ? `<span>${escHtml(year)}</span>` : ''}
+          </div>
+          ${provider ? `<div class="preview-entry-sub">${escHtml(provider)}</div>` : ''}
+        </div>`;
+    });
+
+    document.getElementById('live-resume-preview').innerHTML = `
+      <div class="resume-header">
+        <h1>${escHtml(name || 'Your Name')}</h1>
+        ${contactLine ? `<p class="contact-line">${contactLine}</p>` : ''}
+        ${role ? `<p class="role-line">${escHtml(role)}</p>` : ''}
+      </div>
+      ${summary ? `
+      <div class="resume-section">
+        <h2>Professional Summary</h2>
+        <p>${escHtml(summary)}</p>
+      </div>` : ''}
+      ${skillsHtml}
+      ${expHtml ? `<div class="resume-section"><h2>Work Experience</h2>${expHtml}</div>` : ''}
+      ${eduHtml ? `<div class="resume-section"><h2>Education</h2>${eduHtml}</div>` : ''}
+      ${projHtml ? `<div class="resume-section"><h2>Projects</h2>${projHtml}</div>` : ''}
+      ${certHtml ? `<div class="resume-section"><h2>Certifications</h2>${certHtml}</div>` : ''}
+    `;
+  }
+
+  /* ── Bubble input events from form to updatePreview ── */
+  document.getElementById('generate-resume-form').addEventListener('input', updatePreview);
+
+  /* ── Serialize hidden fields on submit ── */
   function prepareResumeData() {
-    document.getElementById("skills_json").value = JSON.stringify(skills);
+    document.getElementById('skills_json').value = JSON.stringify(skills);
 
-    const experiences = Array.from(document.querySelectorAll(".experience-block")).map(block => ({
-      company:     block.querySelector(".exp-company").value,
-      role:        block.querySelector(".exp-role").value,
-      period:      block.querySelector(".exp-period").value,
-      description: block.querySelector(".exp-description").value
+    const experiences = Array.from(document.querySelectorAll('.experience-block')).map(block => ({
+      company:     block.querySelector('.exp-company').value,
+      role:        block.querySelector('.exp-role').value,
+      period:      block.querySelector('.exp-period').value,
+      description: block.querySelector('.exp-description').value
     }));
 
-    const educations = Array.from(document.querySelectorAll(".education-block")).map(block => ({
-      school: block.querySelector(".edu-school").value,
-      degree: block.querySelector(".edu-degree").value,
-      period: block.querySelector(".edu-period").value
+    const educations = Array.from(document.querySelectorAll('.education-block')).map(block => ({
+      school: block.querySelector('.edu-school').value,
+      degree: block.querySelector('.edu-degree').value,
+      period: block.querySelector('.edu-period').value
     }));
 
-    const projects = Array.from(document.querySelectorAll(".project-block")).map(block => ({
-      title:       block.querySelector(".project-title").value,
-      tools:       block.querySelector(".project-tools").value,
-      description: block.querySelector(".project-description").value
+    const projects = Array.from(document.querySelectorAll('.project-block')).map(block => ({
+      title:       block.querySelector('.project-title').value,
+      tools:       block.querySelector('.project-tools').value,
+      description: block.querySelector('.project-description').value
     }));
 
-    const certifications = Array.from(document.querySelectorAll(".certification-block")).map(block => ({
-      name:     block.querySelector(".cert-name").value,
-      provider: block.querySelector(".cert-provider").value,
-      year:     block.querySelector(".cert-year").value
+    const certifications = Array.from(document.querySelectorAll('.certification-block')).map(block => ({
+      name:     block.querySelector('.cert-name').value,
+      provider: block.querySelector('.cert-provider').value,
+      year:     block.querySelector('.cert-year').value
     }));
 
-    document.getElementById("experiences_json").value    = JSON.stringify(experiences);
-    document.getElementById("educations_json").value     = JSON.stringify(educations);
-    document.getElementById("projects_json").value       = JSON.stringify(projects);
-    document.getElementById("certifications_json").value = JSON.stringify(certifications);
+    document.getElementById('experiences_json').value    = JSON.stringify(experiences);
+    document.getElementById('educations_json').value     = JSON.stringify(educations);
+    document.getElementById('projects_json').value       = JSON.stringify(projects);
+    document.getElementById('certifications_json').value = JSON.stringify(certifications);
   }
 
-  // Demo data for FYP prototype showcase
-  window.addEventListener("load", function () {
-    document.getElementById("full_name").value  = "Aiman Hakimi";
-    document.getElementById("email").value      = "aiman@email.com";
-    document.getElementById("phone").value      = "012-3456789";
-    document.getElementById("location").value   = "Kuala Lumpur, Malaysia";
-    document.getElementById("target_role").value = "Software Engineer";
+  /* ── Demo data for FYP prototype showcase ── */
+  window.addEventListener('load', function () {
+    document.getElementById('full_name').value   = 'Aiman Hakimi';
+    document.getElementById('email').value       = 'aiman@email.com';
+    document.getElementById('phone').value       = '012-3456789';
+    document.getElementById('location').value    = 'Kuala Lumpur, Malaysia';
+    document.getElementById('target_role').value = 'Software Engineer';
 
-    document.getElementById("target_job_description").value =
-      "We are looking for a Software Engineer to design, develop, test, and maintain web applications. " +
-      "The candidate should have experience with Python, JavaScript, SQL, REST API development, Git, and database management. " +
-      "Knowledge of Flask, Django, React, HTML, CSS, and Bootstrap is an advantage. " +
-      "The role requires strong problem-solving skills, debugging skills, and the ability to work in a team. " +
-      "Familiarity with software testing, cloud platforms, Docker, and agile development is preferred.";
+    document.getElementById('target_job_description').value =
+      'We are looking for a Software Engineer to design, develop, test, and maintain web applications. ' +
+      'The candidate should have experience with Python, JavaScript, SQL, REST API development, Git, and database management. ' +
+      'Knowledge of Flask, Django, React, HTML, CSS, and Bootstrap is an advantage. ' +
+      'The role requires strong problem-solving skills, debugging skills, and the ability to work in a team. ' +
+      'Familiarity with software testing, cloud platforms, Docker, and agile development is preferred.';
 
-    document.getElementById("summary").value =
-      "Computer Science student with experience in web application development, backend programming, and database management. " +
-      "Skilled in Python, JavaScript, SQL, Flask, and Git, with interest in building scalable and user-friendly software systems.";
+    document.getElementById('summary').value =
+      'Computer Science student with experience in web application development, backend programming, and database management. ' +
+      'Skilled in Python, JavaScript, SQL, Flask, and Git, with interest in building scalable and user-friendly software systems.';
 
     skills = [
-      "Python", "JavaScript", "SQL", "Flask", "HTML", "CSS", "Bootstrap",
-      "Git", "GitHub", "REST API", "MySQL", "Problem Solving", "Debugging", "Software Testing"
+      'Python', 'JavaScript', 'SQL', 'Flask', 'HTML', 'CSS', 'Bootstrap',
+      'Git', 'GitHub', 'REST API', 'MySQL', 'Problem Solving', 'Debugging', 'Software Testing'
     ];
     renderSkills();
 
     addExperience();
-    const expBlock = document.querySelector(".experience-block");
-    expBlock.querySelector(".exp-company").value     = "TechNova Solutions";
-    expBlock.querySelector(".exp-role").value        = "Software Development Intern";
-    expBlock.querySelector(".exp-period").value      = "June 2025 - September 2025";
-    expBlock.querySelector(".exp-description").value =
-      "I helped develop internal web applications using Python, Flask, HTML, CSS, and JavaScript. " +
-      "I worked with SQL databases to store and retrieve user data. " +
-      "I fixed bugs reported by users and tested features before deployment. " +
-      "I also used GitHub to collaborate with other developers and manage code changes.";
+    const expBlock = document.querySelector('.experience-block');
+    expBlock.querySelector('.exp-company').value     = 'TechNova Solutions';
+    expBlock.querySelector('.exp-role').value        = 'Software Development Intern';
+    expBlock.querySelector('.exp-period').value      = 'June 2025 - September 2025';
+    expBlock.querySelector('.exp-description').value =
+      'I helped develop internal web applications using Python, Flask, HTML, CSS, and JavaScript. ' +
+      'I worked with SQL databases to store and retrieve user data. ' +
+      'I fixed bugs reported by users and tested features before deployment. ' +
+      'I also used GitHub to collaborate with other developers and manage code changes.';
 
     addEducation();
-    const eduBlock = document.querySelector(".education-block");
-    eduBlock.querySelector(".edu-school").value  = "International Islamic University Malaysia";
-    eduBlock.querySelector(".edu-degree").value  = "Bachelor of Computer Science";
-    eduBlock.querySelector(".edu-period").value  = "2022 - 2026";
+    const eduBlock = document.querySelector('.education-block');
+    eduBlock.querySelector('.edu-school').value = 'International Islamic University Malaysia';
+    eduBlock.querySelector('.edu-degree').value = 'Bachelor of Computer Science';
+    eduBlock.querySelector('.edu-period').value = '2022 - 2026';
 
     addProject();
-    const projectBlock = document.querySelector(".project-block");
-    projectBlock.querySelector(".project-title").value       = "AI-Based Resume Screening System";
-    projectBlock.querySelector(".project-tools").value       = "Python, Flask, NLP, TF-IDF, Cosine Similarity, Bootstrap, SQLite";
-    projectBlock.querySelector(".project-description").value =
-      "Developed a web-based resume screening system that compares resumes with job descriptions. " +
-      "The system extracts resume text, identifies matched and missing skills, calculates match scores, and displays ranking results.";
+    const projectBlock = document.querySelector('.project-block');
+    projectBlock.querySelector('.project-title').value       = 'AI-Based Resume Screening System';
+    projectBlock.querySelector('.project-tools').value       = 'Python, Flask, NLP, TF-IDF, Cosine Similarity, Bootstrap, SQLite';
+    projectBlock.querySelector('.project-description').value =
+      'Developed a web-based resume screening system that compares resumes with job descriptions. ' +
+      'The system extracts resume text, identifies matched and missing skills, calculates match scores, and displays ranking results.';
 
     addCertification();
-    const certBlock = document.querySelector(".certification-block");
-    certBlock.querySelector(".cert-name").value     = "Python for Everybody";
-    certBlock.querySelector(".cert-provider").value = "University of Michigan, Coursera";
-    certBlock.querySelector(".cert-year").value     = "2024";
+    const certBlock = document.querySelector('.certification-block');
+    certBlock.querySelector('.cert-name').value     = 'Python for Everybody';
+    certBlock.querySelector('.cert-provider').value = 'University of Michigan, Coursera';
+    certBlock.querySelector('.cert-year').value     = '2024';
 
-    // Loader
-    const genForm   = document.getElementById("generate-resume-form");
-    const genLoader = document.getElementById("generate-loader");
+    /* Initial preview render */
+    updatePreview();
+
+    /* Loader on submit */
+    const genForm   = document.getElementById('generate-resume-form');
+    const genLoader = document.getElementById('generate-loader');
     if (genForm && genLoader) {
-      genForm.addEventListener("submit", function () {
-        genLoader.removeAttribute("hidden");
+      genForm.addEventListener('submit', function () {
+        genLoader.removeAttribute('hidden');
       });
     }
   });
