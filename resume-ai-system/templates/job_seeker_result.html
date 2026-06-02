@@ -225,79 +225,59 @@
         })();
       </script>
 
-      <!-- AI Feedback — structured -->
+      <!-- AI Feedback — structured cards from backend -->
       <section class="workbench">
         <div class="section-heading">
           <span class="eyebrow">Explainable AI</span>
           <h2>AI Explanation and Improvement Advice</h2>
         </div>
 
-        <!-- Raw text hidden; JS parses it into cards -->
-        <p id="ai-feedback-raw" class="feedback-raw" style="display:none;">{{ ai_feedback }}</p>
-        <div id="ai-feedback-structured" class="feedback-grid"></div>
+        <div class="feedback-grid">
 
-        <!-- Fallback shown until JS runs -->
-        <p id="ai-feedback-fallback" class="feedback-raw">{{ ai_feedback }}</p>
+          {% if ai_feedback.strengths %}
+          <div class="feedback-card">
+            <div class="feedback-card-header">
+              <div class="feedback-card-icon good"><i class="fa-solid fa-circle-check"></i></div>
+              <span class="feedback-card-title">What's Working</span>
+            </div>
+            <ul class="feedback-points">
+              {% for point in ai_feedback.strengths %}
+              <li><i class="fa-solid fa-check fp-good"></i>{{ point }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if ai_feedback.gaps %}
+          <div class="feedback-card">
+            <div class="feedback-card-header">
+              <div class="feedback-card-icon warn"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <span class="feedback-card-title">Gaps &amp; Weaknesses</span>
+            </div>
+            <ul class="feedback-points">
+              {% for point in ai_feedback.gaps %}
+              <li><i class="fa-solid fa-xmark fp-warn"></i>{{ point }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if ai_feedback.recommendations %}
+          <div class="feedback-card">
+            <div class="feedback-card-header">
+              <div class="feedback-card-icon tip"><i class="fa-solid fa-lightbulb"></i></div>
+              <span class="feedback-card-title">Recommendations</span>
+            </div>
+            <ul class="feedback-points">
+              {% for point in ai_feedback.recommendations %}
+              <li><i class="fa-solid fa-arrow-right fp-tip"></i>{{ point }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+        </div>
       </section>
-
-      <script>
-        (function () {
-          var raw      = document.getElementById("ai-feedback-raw");
-          var grid     = document.getElementById("ai-feedback-structured");
-          var fallback = document.getElementById("ai-feedback-fallback");
-          if (!raw || !grid) return;
-
-          var text = raw.textContent.trim();
-          if (!text) return;
-
-          /* Split into individual sentences */
-          var sentences = text
-            .replace(/([.!?])\s+/g, "$1\n")
-            .split("\n")
-            .map(function(s){ return s.trim(); })
-            .filter(function(s){ return s.length > 8; });
-
-          if (sentences.length < 2) return; /* too short to structure */
-
-          /* Classify each sentence */
-          var goodKw  = /strong|good|well|excel|great|solid|demonstrat|relevant|match|align|has|skilled|proficien|cover|includ|found|show|present/i;
-          var warnKw  = /miss|lack|gap|not|no |without|absent|weak|improv|add|should|need|consider|recommend|suggest|however|but |although|unfortunately|limited/i;
-          var tipKw   = /tip|advice|suggest|recommend|could|would benefit|try|ensure|make sure|tailor|customis|customize|optim|highlight|focus|includ/i;
-
-          var good = [], warn = [], tips = [];
-          sentences.forEach(function(s) {
-            if (tipKw.test(s))       tips.push(s);
-            else if (warnKw.test(s)) warn.push(s);
-            else if (goodKw.test(s)) good.push(s);
-            else                     tips.push(s); /* default bucket */
-          });
-
-          /* Build HTML */
-          function makeCard(title, iconCls, iconType, points, ptClass, iCls) {
-            if (!points.length) return "";
-            var items = points.map(function(p) {
-              return '<li><i class="' + iCls + ' ' + ptClass + '"></i>' + p + '</li>';
-            }).join("");
-            return '<div class="feedback-card">'
-              + '<div class="feedback-card-header">'
-              + '<div class="feedback-card-icon ' + iconType + '"><i class="' + iconCls + '"></i></div>'
-              + '<span class="feedback-card-title">' + title + '</span>'
-              + '</div>'
-              + '<ul class="feedback-points">' + items + '</ul>'
-              + '</div>';
-          }
-
-          var html =
-            makeCard("What's Working",   "fa-solid fa-circle-check",           "good", good, "fp-good", "fa-solid fa-check") +
-            makeCard("Gaps & Weaknesses","fa-solid fa-triangle-exclamation",   "warn", warn, "fp-warn", "fa-solid fa-xmark") +
-            makeCard("Recommendations",  "fa-solid fa-lightbulb",              "tip",  tips, "fp-tip",  "fa-solid fa-arrow-right");
-
-          if (html.trim()) {
-            grid.innerHTML = html;
-            fallback.style.display = "none";
-          }
-        })();
-      </script>
 
       <!-- Matched / Missing Skills -->
       <div class="content-grid">

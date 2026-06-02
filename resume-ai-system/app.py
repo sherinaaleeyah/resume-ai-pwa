@@ -1515,11 +1515,34 @@ def generate_ai_resume_summary(resume_data):
         print(f"AI resume summary error: {e}")
         return resume_data.get("summary", "")
     
+def clean_bullet_points(text):
+    """
+    Strip any intro sentence Gemini adds (e.g. "Here are 3 bullet points:")
+    and normalise bullet markers to the standard • character.
+    """
+    import re
+    lines = text.strip().splitlines()
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip intro/outro lines that don't start with a bullet marker
+        if re.match(r"^(here are|the following|below are|these are)", stripped, re.IGNORECASE):
+            continue
+        # Normalise *, -, – markers to •
+        stripped = re.sub(r"^[\*\-\–]\s+", "• ", stripped)
+        # If it already starts with • keep it, otherwise prefix it
+        if not stripped.startswith("•"):
+            stripped = "• " + stripped
+        cleaned.append(stripped)
+    return "\n".join(cleaned)
+
 def generate_ai_bullet_points(experience):
     prompt = f"""
     You are an AI resume writing assistant.
 
-    Convert the following work experience into 3 professional resume bullet points.
+    Convert the following work experience into exactly 3 resume bullet points.
 
     Company: {experience.get("company")}
     Role: {experience.get("role")}
@@ -1528,15 +1551,16 @@ def generate_ai_bullet_points(experience):
     {experience.get("description")}
 
     Requirements:
-    1. Use strong action verbs.
-    2. Make the bullets suitable for an ATS-friendly resume.
-    3. Do not invent fake achievements or numbers.
-    4. Keep each bullet concise.
+    1. Output ONLY the 3 bullet points, nothing else — no intro sentence, no heading, no extra text.
+    2. Start each bullet point with a • symbol.
+    3. Use strong action verbs.
+    4. Make each bullet concise and ATS-friendly.
+    5. Do not invent fake achievements or numbers.
     """
 
     try:
         response = model.generate_content(prompt)
-        return response.text.strip()
+        return clean_bullet_points(response.text.strip())
 
     except exceptions.ResourceExhausted:
         return experience.get("description", "")
