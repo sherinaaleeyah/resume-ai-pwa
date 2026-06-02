@@ -496,6 +496,49 @@ def check_ats_structure(resume_text):
 
     return feedback
 
+
+def parse_structured_feedback(text):
+    """
+    Parse the structured AI feedback text into a dict with three keys:
+    strengths, gaps, recommendations.
+    Each value is a list of bullet point strings.
+    Falls back gracefully if the headers are not found.
+    """
+    import re
+
+    sections = {"strengths": [], "gaps": [], "recommendations": []}
+
+    # Split on the known headers (case-insensitive)
+    # Pattern: header line followed by bullet lines until the next header or end
+    header_map = {
+        r"WHAT['\u2019]?S WORKING": "strengths",
+        r"GAPS\s*&\s*WEAKNESSES":    "gaps",
+        r"RECOMMENDATIONS":             "recommendations",
+    }
+
+    current_key = None
+    for line in text.splitlines():
+        stripped = line.strip()
+
+        matched_header = False
+        for pattern, key in header_map.items():
+            if re.match(pattern + r"[:\s]*$", stripped, re.IGNORECASE):
+                current_key = key
+                matched_header = True
+                break
+
+        if matched_header or not stripped:
+            continue
+
+        if current_key:
+            # Strip leading dash/bullet/asterisk
+            point = re.sub(r"^[-*\u2022]\s*", "", stripped).strip()
+            # Skip lines that are just the header label repeated
+            if point and len(point) > 4:
+                sections[current_key].append(point)
+
+    return sections
+
 #Job seeker: AI Feedback Function
 def generate_job_seeker_ai_feedback(score, matched, missing, ats_feedback, job_description):
     missing_sections = [
@@ -520,16 +563,24 @@ def generate_job_seeker_ai_feedback(score, matched, missing, ats_feedback, job_d
     {", ".join(missing_sections) if missing_sections else "No major missing ATS sections detected."}
 
     Task:
-    Write a clear and honest resume analysis for the job seeker.
+    Write a structured resume analysis using EXACTLY the three section headers below.
+    Each section must contain 2-4 bullet points starting with a dash (-).
+    Do not add any text outside of these three sections.
+
+    WHAT'S WORKING:
+    - (strengths, matched skills, what the resume does well)
+
+    GAPS & WEAKNESSES:
+    - (missing skills, skill gaps, ATS structure issues)
+
+    RECOMMENDATIONS:
+    - (specific, practical steps the job seeker should take to improve)
 
     Requirements:
-    1. Start by explaining what the match score means.
-    2. Mention the candidate's strongest matching areas.
-    3. Clearly explain the missing skills or skill gaps.
-    4. Mention ATS structure issues if any.
-    5. Give practical improvement suggestions.
-    6. Do not exaggerate. Be honest but encouraging.
-    7. Write in 2 short paragraphs, suitable for a student/job seeker.
+    - Each bullet point must be one clear, concise sentence.
+    - Be honest but encouraging. Write for a student or fresh graduate.
+    - Do not merge sections or add extra headers.
+    - Do not use bold, asterisks, or markdown formatting inside the bullet points.
     """
 
     try:
@@ -537,11 +588,30 @@ def generate_job_seeker_ai_feedback(score, matched, missing, ats_feedback, job_d
         return response.text.strip()
 
     except exceptions.ResourceExhausted:
-        return "AI feedback is temporarily unavailable due to usage limits. However, you can improve your resume by adding missing skills, using clear ATS-friendly section headings, and aligning your wording with the job description."
+        return """WHAT'S WORKING:
+- Your resume has been submitted and partially matches the job description.
+
+GAPS & WEAKNESSES:
+- AI feedback is temporarily unavailable due to usage limits.
+- Please review the matched and missing skills sections below for details.
+
+RECOMMENDATIONS:
+- Add any missing skills listed below to your resume if you have them.
+- Use clear ATS-friendly section headings such as Skills, Experience, and Education.
+- Align your wording closely with the language used in the job description."""
 
     except Exception as e:
         print(f"AI feedback error: {e}")
-        return "AI feedback is currently unavailable. Please review the matched skills, missing skills, and ATS section feedback below."
+        return """WHAT'S WORKING:
+- Your resume has been received and analysed.
+
+GAPS & WEAKNESSES:
+- AI feedback is currently unavailable.
+- Please review the skill match results and ATS section feedback below.
+
+RECOMMENDATIONS:
+- Ensure your resume includes all required skills from the job description.
+- Use standard section headings to improve ATS compatibility."""
 
 def format_activity_date(value):
     try:
@@ -1210,13 +1280,14 @@ def analyze_job_seeker_resume():
 
     ats_feedback = check_ats_structure(resume_text)
 
-    ai_feedback = generate_job_seeker_ai_feedback(
+    ai_feedback_raw = generate_job_seeker_ai_feedback(
         score=score,
         matched=matched,
         missing=missing,
         ats_feedback=ats_feedback,
         job_description=job_description
     )
+    ai_feedback = parse_structured_feedback(ai_feedback_raw)
 
     return render_template(
         "job_seeker_result.html",
@@ -1495,16 +1566,24 @@ def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_r
     {", ".join(missing_sections) if missing_sections else "No major missing sections detected."}
 
     Task:
-    Give a clear explanation of the resume score and suggest what the job seeker should improve.
+    Write a structured resume analysis using EXACTLY the three section headers below.
+    Each section must contain 2-4 bullet points starting with a dash (-).
+    Do not add any text outside of these three sections.
+
+    WHAT'S WORKING:
+    - (strengths, matched skills, what the resume does well)
+
+    GAPS & WEAKNESSES:
+    - (missing skills, skill gaps, ATS structure issues)
+
+    RECOMMENDATIONS:
+    - (specific, practical steps the job seeker should take to improve)
 
     Requirements:
-    1. Explain what the score means.
-    2. Mention strengths.
-    3. Mention missing skills or skill gaps.
-    4. Mention ATS structure issues if any.
-    5. Give practical improvement suggestions.
-    6. Use a helpful and honest tone.
-    7. Write in 2 short paragraphs.
+    - Each bullet point must be one clear, concise sentence.
+    - Be honest but encouraging. Write for a student or fresh graduate.
+    - Do not merge sections or add extra headers.
+    - Do not use bold, asterisks, or markdown formatting inside the bullet points.
     """
 
     try:
@@ -1512,11 +1591,30 @@ def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_r
         return response.text.strip()
 
     except exceptions.ResourceExhausted:
-        return "AI feedback is temporarily unavailable due to usage limits. Please review the matched skills, missing skills, and ATS structure feedback."
+        return """WHAT'S WORKING:
+- Your resume has been submitted and partially matches the target role.
+
+GAPS & WEAKNESSES:
+- AI feedback is temporarily unavailable due to usage limits.
+- Please review the matched and missing skills sections below for details.
+
+RECOMMENDATIONS:
+- Add any missing skills listed below to your resume if you have them.
+- Use clear ATS-friendly section headings such as Skills, Experience, and Education.
+- Tailor your professional summary to the target role."""
 
     except Exception as e:
         print(f"AI builder feedback error: {e}")
-        return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
+        return """WHAT'S WORKING:
+- Your resume has been received and analysed.
+
+GAPS & WEAKNESSES:
+- AI feedback is currently unavailable.
+- Please review the skill match results and ATS section feedback below.
+
+RECOMMENDATIONS:
+- Ensure your resume includes all required skills from the job description.
+- Use standard section headings to improve ATS compatibility."""
 
 @app.route("/generate_resume", methods=["POST"])
 def generate_resume():
@@ -1601,13 +1699,14 @@ def generate_resume():
 
     ats_feedback = check_builder_ats_structure(resume_data)
 
-    ai_feedback = generate_builder_ai_feedback(
+    ai_feedback_raw = generate_builder_ai_feedback(
         score=score,
         matched=matched,
         missing=missing,
         ats_feedback=ats_feedback,
         target_role=resume_data.get("target_role", "")
     )
+    ai_feedback = parse_structured_feedback(ai_feedback_raw)
 
     return render_template(
         "resume_preview.html",
