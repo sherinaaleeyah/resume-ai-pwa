@@ -2324,3 +2324,19 @@ main.dashboard-shell { padding-top: 32px; padding-bottom: 64px; }
         grid-row: auto;
     }
 }
+/* ── Scoring weight slider (recruiter job page) ── */
+.weight-form {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    background: var(--gray-50);
+}
+.weight-form-header { display: flex; justify-content: space-between; align-items: center; }
+.weight-form-header label { font-weight: 700; margin: 0; }
+.weight-labels { display: flex; justify-content: space-between; font-size: 0.85rem; flex-wrap: wrap; gap: 4px; }
+.weight-form small { color: var(--gray-500); }
+.weight-info { color: var(--gray-500); font-size: 0.8rem; cursor: help; }
+.weight-form-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }

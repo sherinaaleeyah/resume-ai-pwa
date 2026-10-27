@@ -62,7 +62,7 @@
         <details class="job-description-dropdown">
             <summary>View full job description</summary>
             <div class="description-content">
-              <form action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form">
+              <form id="edit-job-form" action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form">
                 <div class="form-group">
                   <label for="edit-title">Job Title</label>
                   <input id="edit-title" type="text" name="title" value="{{ selected_job.title }}" required>
@@ -90,6 +90,25 @@
             <span class="eyebrow">Upload Zone</span>
             <h2>Rank resumes for this job</h2>
           </div>
+          {% set kw_pct = (selected_job.keyword_weight * 100) | round | int %}
+          <form id="weight-form" action="{{ url_for('update_job_weights', job_id=selected_job.id) }}" method="post" class="weight-form">
+            <div class="weight-form-header">
+              <label for="keyword-weight">Scoring weight</label>
+              <button type="button" id="weight-reset" class="btn btn-link btn-sm p-0">Reset</button>
+            </div>
+            <input id="keyword-weight" type="range" name="keyword_weight" min="0" max="100" step="5" value="{{ kw_pct }}" class="form-range">
+            <div class="weight-labels">
+              <span>Skill Precision <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How well their skills match the job's required skills"></i> <strong id="keyword-weight-value">{{ kw_pct }}%</strong></span>
+              <span>Profile Relevance <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How similar their overall experience is to the role"></i> <strong id="semantic-weight-value">{{ 100 - kw_pct }}%</strong></span>
+            </div>
+            <div class="weight-form-footer">
+              <small>Click Apply to re-rank existing candidates.</small>
+              <button type="submit" id="weight-apply" class="btn btn-primary btn-sm" disabled>
+                <i class="fa-solid fa-check"></i> Apply
+              </button>
+            </div>
+          </form>
+
           <form id="resume-rank-form" action="{{ url_for('rank_job_resumes', job_id=selected_job.id) }}" method="post" enctype="multipart/form-data" class="upload-form">
             <div class="form-group file-zone">
               <label for="resumes">Upload PDF or DOCX resumes</label>
@@ -462,10 +481,45 @@
       });
     }
 
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => new bootstrap.Tooltip(el));
+
+    const weightForm = document.getElementById("weight-form");
+    const weightSlider = document.getElementById("keyword-weight");
+    if (weightForm && weightSlider) {
+      const keywordLabel = document.getElementById("keyword-weight-value");
+      const semanticLabel = document.getElementById("semantic-weight-value");
+      const initialWeight = weightSlider.value;
+
+      const applyButton = document.getElementById("weight-apply");
+
+      const updateWeightLabels = () => {
+        keywordLabel.textContent = `${weightSlider.value}%`;
+        semanticLabel.textContent = `${100 - weightSlider.value}%`;
+        applyButton.disabled = weightSlider.value === initialWeight;
+      };
+
+      weightSlider.addEventListener("input", updateWeightLabels);
+      document.getElementById("weight-reset").addEventListener("click", () => {
+        weightSlider.value = 60;
+        updateWeightLabels();
+      });
+    }
+
     const rankForm = document.getElementById("resume-rank-form");
     const rankingLoader = document.getElementById("ranking-loader");
     if (rankForm && rankingLoader) {
       rankForm.addEventListener("submit", function () {
+        rankingLoader.removeAttribute("hidden");
+      });
+    }
+
+    const editJobForm = document.getElementById("edit-job-form");
+    const editDescription = document.getElementById("edit-description");
+    if (editJobForm && rankingLoader) {
+      const originalDescription = editDescription.value;
+      editJobForm.addEventListener("submit", function () {
+        if (editDescription.value.trim() === originalDescription.trim()) return;
+        rankingLoader.querySelector(".loader-title").textContent = "Re-scoring candidates";
         rankingLoader.removeAttribute("hidden");
       });
     }

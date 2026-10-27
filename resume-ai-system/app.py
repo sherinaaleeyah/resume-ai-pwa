@@ -12,6 +12,7 @@ try:
     _bert_model = SentenceTransformer('all-MiniLM-L6-v2')
 except Exception:
     _bert_model = None
+import glob
 import json
 import os
 import sqlite3
@@ -353,6 +354,39 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def extract_resume_text(file_or_path, filename=None):
+    name = (filename or str(file_or_path)).lower()
+    if name.endswith(".pdf"):
+        return parse_pdf(file_or_path)
+    if name.endswith(".docx"):
+        return parse_docx(file_or_path)
+    return ""
+
+def find_uploaded_resume(original_filename, created_at):
+    # Saved uploads are named "<stem>_<utc timestamp><suffix>" (see save_uploaded_resume).
+    # Pick the earliest one for this file saved at or after the candidate row's timestamp.
+    stem = Path(original_filename).stem
+    suffix = Path(original_filename).suffix.lower()
+    try:
+        row_time = datetime.fromisoformat(created_at)
+    except ValueError:
+        return None
+
+    best = None
+    for path in Path(UPLOAD_DIR).glob(f"{glob.escape(stem)}_*{suffix}"):
+        try:
+            saved_time = datetime.strptime(path.stem[len(stem) + 1:], "%Y%m%d%H%M%S%f")
+        except ValueError:
+            continue
+        # Uploads are saved while the batch is processed, so allow up to 10 minutes after the row time
+        delta = (saved_time.replace(microsecond=0) - row_time).total_seconds()
+        if 0 <= delta <= 600 and (best is None or saved_time < best[0]):
+            best = (saved_time, path)
+    return str(best[1]) if best else None
+
+# Share of the combined score that comes from keyword matching; the rest is semantic similarity.
+DEFAULT_KEYWORD_WEIGHT = 0.6
+
 def init_db():
     with get_db_connection() as conn:
         conn.execute(
@@ -369,6 +403,8 @@ def init_db():
         columns = [row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()]
         if "active" not in columns:
             conn.execute("ALTER TABLE jobs ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+        if "keyword_weight" not in columns:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN keyword_weight REAL NOT NULL DEFAULT {DEFAULT_KEYWORD_WEIGHT}")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS candidate_scores (
@@ -387,6 +423,44 @@ def init_db():
         score_columns = [row["name"] for row in conn.execute("PRAGMA table_info(candidate_scores)").fetchall()]
         if "summary" not in score_columns:
             conn.execute("ALTER TABLE candidate_scores ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
+        if "keyword_score" not in score_columns:
+            conn.execute("ALTER TABLE candidate_scores ADD COLUMN keyword_score REAL")
+        if "semantic_score" not in score_columns:
+            conn.execute("ALTER TABLE candidate_scores ADD COLUMN semantic_score REAL")
+        if "resume_text" not in score_columns:
+            conn.execute("ALTER TABLE candidate_scores ADD COLUMN resume_text TEXT")
+
+        # Backfill resume text for rows saved before it was stored, from the uploads folder
+        missing_text_rows = conn.execute(
+            "SELECT id, file_name, created_at FROM candidate_scores WHERE resume_text IS NULL"
+        ).fetchall()
+        for row in missing_text_rows:
+            path = find_uploaded_resume(row["file_name"], row["created_at"])
+            if path:
+                try:
+                    conn.execute(
+                        "UPDATE candidate_scores SET resume_text = ? WHERE id = ?",
+                        (extract_resume_text(path), row["id"]),
+                    )
+                except Exception as e:
+                    print(f"Could not read {path}: {e}")
+
+        # Backfill component scores for rows saved before they were stored,
+        # assuming those rows were scored with the default 60/40 weighting.
+        legacy_rows = conn.execute(
+            "SELECT id, score, matched_skills, missing_skills FROM candidate_scores WHERE keyword_score IS NULL"
+        ).fetchall()
+        for row in legacy_rows:
+            matched = json.loads(row["matched_skills"] or "[]")
+            missing = json.loads(row["missing_skills"] or "[]")
+            total = len(matched) + len(missing)
+            keyword_score = (len(matched) / total) * 100 if total else 0
+            semantic_score = (row["score"] - DEFAULT_KEYWORD_WEIGHT * keyword_score) / (1 - DEFAULT_KEYWORD_WEIGHT)
+            semantic_score = max(0.0, min(100.0, semantic_score))
+            conn.execute(
+                "UPDATE candidate_scores SET keyword_score = ?, semantic_score = ? WHERE id = ?",
+                (keyword_score, semantic_score, row["id"]),
+            )
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS activity (
@@ -399,8 +473,6 @@ def init_db():
             )
             """
         )
-
-init_db()
 
 def candidate_name_from_filename(filename):
     stem = Path(filename).stem
@@ -804,7 +876,18 @@ def parse_docx(file):
     text = " ".join([para.text for para in doc.paragraphs])
     return text.lower()
 
-def calculate_combined_score(resume_text, job_description, required_skills):
+def combine_scores(keyword_score, semantic_score, keyword_weight=None):
+    if keyword_weight is None:
+        keyword_weight = DEFAULT_KEYWORD_WEIGHT
+    return round((keyword_weight * keyword_score) + ((1 - keyword_weight) * semantic_score), 2)
+
+def calculate_combined_score(resume_text, job_description, required_skills, keyword_weight=None):
+    score, matched, missing, _, _ = calculate_score_components(
+        resume_text, job_description, required_skills, keyword_weight
+    )
+    return score, matched, missing
+
+def calculate_score_components(resume_text, job_description, required_skills, keyword_weight=None):
     # Keyword match score
     matched = sorted(skill for skill in required_skills if skill in resume_text)
     missing = sorted(skill for skill in required_skills if skill not in resume_text)
@@ -822,10 +905,9 @@ def calculate_combined_score(resume_text, job_description, required_skills):
         tfidf_matrix = vectorizer.fit_transform(documents)
         semantic_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0] * 100
 
-    # Combine both into one score (tune weights as needed)
-    combined_score = (0.6 * keyword_score) + (0.4 * semantic_score)
+    combined_score = combine_scores(keyword_score, semantic_score, keyword_weight)
 
-    return round(combined_score, 2), matched, missing
+    return combined_score, matched, missing, keyword_score, float(semantic_score)
 
 def safe_json_loads(value):
     try:
@@ -972,6 +1054,8 @@ def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_r
         print(f"AI builder feedback error: {e}")
         return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
 
+init_db()
+
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -1086,9 +1170,91 @@ def edit_job(job_id):
             "UPDATE jobs SET title = ?, company = ?, description = ? WHERE id = ?",
             (title, company, description, job_id),
         )
+
+        message = f"{title} job description updated"
+        if description != job["description"]:
+            rescored, skipped = rescore_job_candidates(conn, job_id, title, description, job["keyword_weight"])
+            message += f" and {rescored} candidate{'s' if rescored != 1 else ''} re-scored"
+            if skipped:
+                message += f" ({skipped} without a stored resume kept their old score)"
+
         conn.execute(
             "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-            (job_id, f"{title} job description updated", None, timestamp),
+            (job_id, message, None, timestamp),
+        )
+
+    return redirect(url_for("job_detail", job_id=job_id))
+
+def rescore_job_candidates(conn, job_id, job_title, job_description, keyword_weight):
+    required_skills = extract_required_skills(job_description)
+    rows = conn.execute(
+        "SELECT id, candidate_name, resume_text FROM candidate_scores WHERE job_id = ?",
+        (job_id,),
+    ).fetchall()
+
+    rescored = skipped = 0
+    for row in rows:
+        if not row["resume_text"]:
+            skipped += 1
+            continue
+
+        score, matched, missing, keyword_score, semantic_score = calculate_score_components(
+            row["resume_text"], job_description, required_skills, keyword_weight
+        )
+        summary = generate_ai_summary(
+            candidate_name=row["candidate_name"],
+            job_title=job_title,
+            job_description=job_description,
+            matched=matched,
+            missing=missing,
+        )
+        conn.execute(
+            """
+            UPDATE candidate_scores
+            SET score = ?, keyword_score = ?, semantic_score = ?,
+                matched_skills = ?, missing_skills = ?, summary = ?
+            WHERE id = ?
+            """,
+            (score, keyword_score, semantic_score, json.dumps(matched), json.dumps(missing), summary, row["id"]),
+        )
+        rescored += 1
+    return rescored, skipped
+
+@app.route("/recruiter/jobs/<int:job_id>/weights", methods=["POST"])
+def update_job_weights(job_id):
+    try:
+        keyword_percent = int(request.form.get("keyword_weight", ""))
+    except ValueError:
+        return redirect(url_for("job_detail", job_id=job_id))
+    keyword_weight = max(0, min(100, keyword_percent)) / 100
+
+    with get_db_connection() as conn:
+        job = conn.execute("SELECT * FROM jobs WHERE id = ? AND active = 1", (job_id,)).fetchone()
+        if job is None:
+            abort(404)
+
+        conn.execute("UPDATE jobs SET keyword_weight = ? WHERE id = ?", (keyword_weight, job_id))
+
+        # Re-rank existing candidates from their stored component scores
+        rows = conn.execute(
+            "SELECT id, keyword_score, semantic_score FROM candidate_scores WHERE job_id = ?",
+            (job_id,),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE candidate_scores SET score = ? WHERE id = ?",
+                (combine_scores(row["keyword_score"], row["semantic_score"], keyword_weight), row["id"]),
+            )
+
+        timestamp = datetime.utcnow().isoformat(timespec="seconds")
+        conn.execute(
+            "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
+            (
+                job_id,
+                f"{job['title']} scoring set to {keyword_percent}% keyword / {100 - keyword_percent}% semantic",
+                None,
+                timestamp,
+            ),
         )
 
     return redirect(url_for("job_detail", job_id=job_id))
@@ -1172,8 +1338,10 @@ def rank_job_resumes(job_id):
         elif filename.endswith(".docx"):
             text = parse_docx(file)
 
-        score, matched, missing = calculate_combined_score(text, job_description, required_skills)
-        
+        score, matched, missing, keyword_score, semantic_score = calculate_score_components(
+            text, job_description, required_skills, job["keyword_weight"]
+        )
+
         # Determine candidate name
         candidate_name = submitted_names[index] if index < len(submitted_names) and submitted_names[index] else candidate_name_from_filename(original_filename)
         
@@ -1193,6 +1361,9 @@ def rank_job_resumes(job_id):
             "file_name": original_filename,
             "file_url": url_for("uploaded_file", filename=saved_filename),
             "score": score,
+            "keyword_score": keyword_score,
+            "semantic_score": semantic_score,
+            "resume_text": text,
             "matched": matched,
             "missing": missing,
             "summary": summary,
@@ -1207,14 +1378,18 @@ def rank_job_resumes(job_id):
                 conn.execute(
                     """
                     INSERT INTO candidate_scores 
-                        (job_id, candidate_name, file_name, score, matched_skills, missing_skills, summary, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        (job_id, candidate_name, file_name, score, keyword_score, semantic_score, resume_text,
+                         matched_skills, missing_skills, summary, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         job_id,
                         result["candidate_name"],
                         result["file_name"],
                         result["score"],
+                        result["keyword_score"],
+                        result["semantic_score"],
+                        result["resume_text"],
                         json.dumps(result["matched"]),
                         json.dumps(result["missing"]),
                         result["summary"],
