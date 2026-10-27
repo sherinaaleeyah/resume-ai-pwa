@@ -4,20 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TalentMatch — AI-Powered Resume Screening</title>
+  <meta name="description" content="TalentMatch scores resumes against your job description, explains every match, and helps candidates close their skill gaps.">
+  <meta name="theme-color" content="#0f0f14">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
-<body>
+<body class="lp">
 
-  <nav class="navbar app-nav">
-    <div class="container-fluid dashboard-shell">
-      <span class="navbar-brand">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> TalentMatch
-      </span>
+  <!-- ── Navigation ── -->
+  <header class="lp-nav">
+    <div class="lp-container lp-nav-inner">
+      <a href="/" class="lp-brand" aria-label="TalentMatch home">
+        <span class="brand-mark">T</span>
+        TalentMatch
+      </a>
+
+      <nav class="lp-nav-links" aria-label="Primary">
+        <a href="#how-it-works">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#audiences">Who it's for</a>
+      </nav>
+
+      <div class="lp-nav-actions">
+        <a href="/job_seeker" class="lp-btn lp-btn-ghost lp-hide-sm">Job seekers</a>
+        <a href="/recruiter" class="lp-btn lp-btn-light">Recruiter dashboard</a>
+      </div>
     </div>
-  </nav>
+  </header>
 
   <main>
 
@@ -47,47 +62,244 @@
           </a>
         </div>
 
-        <div class="trust-badges">
-          <span><i class="fa-solid fa-robot"></i> AI-Powered Resume Matching</span>
-          <span><i class="fa-solid fa-eye"></i> Transparent Scoring</span>
-          <span><i class="fa-solid fa-bolt"></i> Fast Candidate Screening</span>
+       
+
+      </div>
+    </section>
+
+    <!-- ── Product preview ── -->
+    <section class="lp-hero" id="preview">
+      <div class="lp-container lp-hero-grid">
+
+        <div class="lp-hero-copy">
+          <span class="lp-pill">
+            <span class="lp-pill-tag">New</span>
+            Adjustable scoring weights per job
+          </span>
+
+          <h2>Screen resumes with clarity, <span>not guesswork.</span></h2>
+
+          <p class="lp-lead">
+            TalentMatch scores every resume against your job description, explains each
+            match in plain language, and surfaces skill gaps across your applicant pool —
+            so your team can shortlist with confidence.
+          </p>
+
+
+
+          <ul class="lp-checks">
+            <li><i class="fa-solid fa-circle-check"></i> Bulk PDF upload</li>
+            <li><i class="fa-solid fa-circle-check"></i> Explainable scoring</li>
+            <li><i class="fa-solid fa-circle-check"></i> No setup required</li>
+          </ul>
+        </div>
+
+        <!-- Interactive product demo (sample data) -->
+        <div class="lp-preview" id="lpDemo">
+          <p class="lp-demo-hint">
+            <i class="fa-solid fa-hand-pointer"></i>
+            Try it: drag the weighting or select a candidate
+          </p>
+
+          <div class="lp-window">
+            <div class="lp-window-bar">
+              <span></span><span></span><span></span>
+              <div class="lp-window-title">Senior Data Analyst · Ranked candidates</div>
+              <span class="lp-demo-tag">Demo</span>
+            </div>
+
+            <div class="lp-window-body">
+              <div class="lp-mini-kpis">
+                <div><small>Candidates</small><strong>4</strong></div>
+                <div><small>Avg. match</small><strong data-kpi="avg">77%</strong></div>
+                <div><small>Shortlisted</small><strong data-kpi="short">2</strong></div>
+              </div>
+
+              <div class="lp-weight">
+                <div class="lp-weight-head">
+                  <label for="lpWeight">Scoring weight</label>
+                </div>
+                <input type="range" id="lpWeight" min="0" max="100" step="5" value="70"
+                       aria-describedby="lpWhyText">
+                <div class="lp-weight-ends">
+                  <span>Skill precision <b data-weight="skill">70%</b></span>
+                  <span>Profile relevance <b data-weight="rel">30%</b></span>
+                </div>
+              </div>
+
+              <ol class="lp-cand-list" aria-label="Ranked candidates">
+                <li>
+                  <button type="button" class="lp-cand is-selected" aria-pressed="true"
+                          data-name="Candidate A" data-skill="95" data-rel="85" data-matched="9">
+                    <span class="lp-rank r1">1</span>
+                    <span class="lp-cand-info">
+                      <strong>Candidate A</strong>
+                      <span class="lp-tags"><em class="ok">SQL</em><em class="ok">Python</em><em class="ok">Tableau</em></span>
+                    </span>
+                    <span class="lp-score"><b>92%</b><span class="lp-bar"><span style="width:92%"></span></span></span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="lp-cand" aria-pressed="false"
+                          data-name="Candidate B" data-skill="78" data-rel="88" data-matched="7">
+                    <span class="lp-rank r2">2</span>
+                    <span class="lp-cand-info">
+                      <strong>Candidate B</strong>
+                      <span class="lp-tags"><em class="ok">SQL</em><em class="ok">Excel</em><em class="miss">Tableau</em></span>
+                    </span>
+                    <span class="lp-score"><b>81%</b><span class="lp-bar"><span style="width:81%"></span></span></span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="lp-cand" aria-pressed="false"
+                          data-name="Candidate D" data-skill="62" data-rel="96" data-matched="6">
+                    <span class="lp-rank r3">3</span>
+                    <span class="lp-cand-info">
+                      <strong>Candidate D</strong>
+                      <span class="lp-tags"><em class="ok">Excel</em><em class="ok">Statistics</em><em class="miss">Python</em></span>
+                    </span>
+                    <span class="lp-score"><b>72%</b><span class="lp-bar"><span style="width:72%"></span></span></span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="lp-cand" aria-pressed="false"
+                          data-name="Candidate C" data-skill="55" data-rel="85" data-matched="5">
+                    <span class="lp-rank r4">4</span>
+                    <span class="lp-cand-info">
+                      <strong>Candidate C</strong>
+                      <span class="lp-tags"><em class="ok">Python</em><em class="miss">SQL</em><em class="miss">Statistics</em></span>
+                    </span>
+                    <span class="lp-score"><b>64%</b><span class="lp-bar"><span style="width:64%"></span></span></span>
+                  </button>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <div class="lp-float" aria-live="polite">
+            <i class="fa-solid fa-lightbulb"></i>
+            <div>
+              <strong id="lpWhyTitle">Why is Candidate A at 92%?</strong>
+              <span id="lpWhyText">Matches 9 of 10 required skills (95%) with 85% profile relevance, weighted 70/30.</span>
+            </div>
+          </div>
         </div>
 
       </div>
     </section>
 
-    <!-- ── Feature Cards ── -->
-    <section class="landing-features">
-      <div class="landing-shell">
-        <div class="features-grid">
+    <!-- ── How it works ── -->
+    <section class="lp-section" id="how-it-works">
+      <div class="lp-container">
+        <div class="lp-section-head">
+          <span class="lp-kicker">How it works</span>
+          <h2>From job posting to shortlist in three steps</h2>
+          <p>No integrations or training needed. Paste a description, add resumes, and review the results.</p>
+        </div>
 
-          <article class="feature-card">
-            <div class="feature-icon">
-              <i class="fa-solid fa-layer-group"></i>
-            </div>
-            <h3>Bulk Resume Intake</h3>
-            <p>Drop a stack of PDFs and let TalentMatch automatically parse, analyze, score,
-               and rank candidates against your job description.</p>
+        <ol class="lp-steps">
+          <li>
+            <span class="lp-step-num">01</span>
+            <h3>Create a job posting</h3>
+            <p>Paste your job description. TalentMatch extracts the required skills and lets you tune how they're weighted.</p>
+          </li>
+          <li>
+            <span class="lp-step-num">02</span>
+            <h3>Upload resumes</h3>
+            <p>Drop in a batch of PDF resumes. Each one is parsed, analyzed, and scored against the role automatically.</p>
+          </li>
+          <li>
+            <span class="lp-step-num">03</span>
+            <h3>Review the ranked shortlist</h3>
+            <p>See candidates ranked by fit, with matched and missing skills, strengths, and a summary for each.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ── Features ── -->
+    <section class="lp-section lp-section-muted" id="features">
+      <div class="lp-container">
+        <div class="lp-section-head">
+          <span class="lp-kicker">Features</span>
+          <h2>Everything you need to screen fairly and quickly</h2>
+          <p>Built to support recruiter judgement, not replace it.</p>
+        </div>
+
+        <div class="lp-features">
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <h3>Bulk resume intake</h3>
+            <p>Upload many PDFs at once and get every candidate parsed, scored, and ranked in a single pass.</p>
           </article>
 
-          <article class="feature-card">
-            <div class="feature-icon">
-              <i class="fa-solid fa-ranking-star"></i>
-            </div>
-            <h3>Explainable Scores</h3>
-            <p>Every candidate score includes matched skills, missing skills, strengths, and a
-               recruiter-grade summary — so decisions stay transparent and reliable.</p>
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+            <h3>Explainable scores</h3>
+            <p>Every score comes with matched skills, missing skills, and strengths, so you can see how it was reached.</p>
           </article>
 
-          <article class="feature-card">
-            <div class="feature-icon">
-              <i class="fa-solid fa-bullseye"></i>
-            </div>
-            <h3>Skill Gap Intelligence</h3>
-            <p>Identify missing or underrepresented skills across your applicant pool before
-               outreach, interviews, or hiring decisions.</p>
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-chart-column"></i></div>
+            <h3>Skill gap analysis</h3>
+            <p>Spot which required skills are rare across your applicant pool before you start outreach.</p>
           </article>
 
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-sliders"></i></div>
+            <h3>Adjustable weighting</h3>
+            <p>Balance skill match against overall relevance for each role, and re-rank candidates instantly.</p>
+          </article>
+
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+            <h3>Resume feedback</h3>
+            <p>Job seekers get a match score, prioritized suggestions, and an action plan for a target role.</p>
+          </article>
+
+          <article class="lp-feature">
+            <div class="lp-feature-icon"><i class="fa-solid fa-pen-ruler"></i></div>
+            <h3>Resume builder</h3>
+            <p>Generate a clean, structured resume with AI assistance and export it as a Word document.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Audiences ── -->
+    <section class="lp-section" id="audiences">
+      <div class="lp-container">
+        <div class="lp-section-head">
+          <span class="lp-kicker">Who it's for</span>
+          <h2>One platform, two sides of hiring</h2>
+        </div>
+
+        <div class="lp-audiences">
+          <article class="lp-audience lp-audience-dark">
+            <span class="lp-audience-label"><i class="fa-solid fa-briefcase"></i> For recruiters</span>
+            <h3>Build a defensible shortlist in minutes</h3>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> Manage job postings and candidate pools in one dashboard</li>
+              <li><i class="fa-solid fa-check"></i> Rank applicants with transparent, adjustable scoring</li>
+              <li><i class="fa-solid fa-check"></i> Identify skill gaps across every applicant</li>
+            </ul>
+            <a href="/recruiter" class="lp-btn lp-btn-light">
+              Open recruiter dashboard <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </article>
+
+          <article class="lp-audience">
+            <span class="lp-audience-label"><i class="fa-solid fa-user"></i> For job seekers</span>
+            <h3>Know where you stand before you apply</h3>
+            <ul>
+              <li><i class="fa-solid fa-check"></i> Compare your resume against any job description</li>
+              <li><i class="fa-solid fa-check"></i> Get specific, prioritized suggestions to improve</li>
+              <li><i class="fa-solid fa-check"></i> Build a polished resume with the AI resume builder</li>
+            </ul>
+            <a href="/job_seeker" class="lp-btn lp-btn-primary">
+              Analyze my resume <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </article>
         </div>
       </div>
     </section>
@@ -95,6 +307,96 @@
   </main>
 
   <script>
+    // Interactive demo: re-score and re-rank sample candidates as the weighting changes.
+    (function () {
+      var demo = document.getElementById("lpDemo");
+      if (!demo) return;
+
+      var slider = document.getElementById("lpWeight");
+      var list = demo.querySelector(".lp-cand-list");
+      var whyTitle = document.getElementById("lpWhyTitle");
+      var whyText = document.getElementById("lpWhyText");
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var SHORTLIST_AT = 75;
+
+      function scoreOf(btn, w) {
+        return Math.round(w * +btn.dataset.skill + (1 - w) * +btn.dataset.rel);
+      }
+
+      function explain(btn) {
+        var w = slider.value / 100;
+        var s = scoreOf(btn, w);
+        whyTitle.textContent = "Why is " + btn.dataset.name + " at " + s + "%?";
+        whyText.textContent =
+          "Matches " + btn.dataset.matched + " of 10 required skills (" + btn.dataset.skill +
+          "%) with " + btn.dataset.rel + "% profile relevance, weighted " +
+          slider.value + "/" + (100 - slider.value) + ".";
+      }
+
+      function update() {
+        var w = slider.value / 100;
+        var items = Array.prototype.slice.call(list.children);
+
+        // FLIP: remember where each row was before re-ordering
+        var before = new Map();
+        items.forEach(function (li) { before.set(li, li.getBoundingClientRect().top); });
+
+        items.sort(function (a, b) {
+          return scoreOf(b.firstElementChild, w) - scoreOf(a.firstElementChild, w);
+        });
+
+        var total = 0, shortlisted = 0;
+        items.forEach(function (li, i) {
+          var btn = li.firstElementChild;
+          var s = scoreOf(btn, w);
+          total += s;
+          if (s >= SHORTLIST_AT) shortlisted++;
+          btn.querySelector(".lp-score b").textContent = s + "%";
+          btn.querySelector(".lp-bar > span").style.width = s + "%";
+          var rank = btn.querySelector(".lp-rank");
+          rank.textContent = i + 1;
+          rank.className = "lp-rank r" + (i + 1);
+          list.appendChild(li);
+        });
+
+        if (!reduceMotion) {
+          items.forEach(function (li) {
+            var dy = before.get(li) - li.getBoundingClientRect().top;
+            if (!dy) return;
+            li.style.transition = "none";
+            li.style.transform = "translateY(" + dy + "px)";
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                li.style.transition = "transform 0.35s cubic-bezier(.2,.8,.2,1)";
+                li.style.transform = "";
+              });
+            });
+          });
+        }
+
+        demo.querySelector('[data-kpi="avg"]').textContent = Math.round(total / items.length) + "%";
+        demo.querySelector('[data-kpi="short"]').textContent = shortlisted;
+        demo.querySelector('[data-weight="skill"]').textContent = slider.value + "%";
+        demo.querySelector('[data-weight="rel"]').textContent = (100 - slider.value) + "%";
+        slider.style.setProperty("--fill", slider.value + "%");
+
+        explain(list.querySelector(".is-selected"));
+      }
+
+      list.addEventListener("click", function (e) {
+        var btn = e.target.closest(".lp-cand");
+        if (!btn) return;
+        list.querySelectorAll(".lp-cand").forEach(function (b) {
+          b.classList.toggle("is-selected", b === btn);
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        });
+        explain(btn);
+      });
+
+      slider.addEventListener("input", update);
+      update();
+    })();
+
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker.register("/service-worker.js");

@@ -13,7 +13,7 @@
   <nav class="navbar navbar-expand-lg app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
-        <span class="navbar-brand"><i class="fa-solid fa-wand-magic-sparkles"></i> TalentMatch</span>
+        <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
         <span class="nav-mode-pill">Recruiter</span>
       </div>
       <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back</a>
@@ -495,9 +495,11 @@
       const updateWeightLabels = () => {
         keywordLabel.textContent = `${weightSlider.value}%`;
         semanticLabel.textContent = `${100 - weightSlider.value}%`;
+        weightSlider.style.setProperty("--fill", `${weightSlider.value}%`);
         applyButton.disabled = weightSlider.value === initialWeight;
       };
 
+      weightSlider.style.setProperty("--fill", `${weightSlider.value}%`);
       weightSlider.addEventListener("input", updateWeightLabels);
       document.getElementById("weight-reset").addEventListener("click", () => {
         weightSlider.value = 60;
