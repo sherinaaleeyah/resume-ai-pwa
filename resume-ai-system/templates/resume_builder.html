@@ -3,251 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATS Resume Builder - TalentMatch</title>
+  <title>Resume Builder · TalentMatch</title>
+  <meta name="theme-color" content="#0f0f14">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <style>
-    /* ── Builder two-column layout ── */
-    .builder-layout {
-      display: grid;
-      grid-template-columns: 1fr 400px;
-      gap: 28px;
-      align-items: start;
-    }
-    .builder-preview-col {
-      position: sticky;
-      top: 76px;
-      max-height: calc(100vh - 96px);
-      overflow-y: auto;
-      scrollbar-width: thin;
-    }
-    .builder-preview-col::-webkit-scrollbar { width: 4px; }
-    .builder-preview-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ── Preview panel header ── */
-    .preview-panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px 12px;
-      background: var(--gray-900);
-      border-radius: var(--radius-md) var(--radius-md) 0 0;
-      border: 1.5px solid var(--border);
-      border-bottom: none;
-    }
-    .preview-panel-header .label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.5);
-    }
-    .preview-pulse {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.72rem;
-      color: rgba(255,255,255,0.4);
-      font-weight: 600;
-    }
-    .preview-pulse-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #4ade80;
-      animation: pulse-dot 2s infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* ── Resume document (compact preview version) ── */
-    .builder-resume-doc {
-      background: var(--white);
-      color: var(--black);
-      padding: 28px 30px;
-      border: 1.5px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 var(--radius-md) var(--radius-md);
-      font-size: 0.82rem;
-      line-height: 1.55;
-    }
-    .builder-resume-doc .resume-header {
-      text-align: center;
-      border-bottom: 1.5px solid var(--black);
-      padding-bottom: 14px;
-      margin-bottom: 18px;
-    }
-    .builder-resume-doc .resume-header h1 {
-      margin: 0;
-      font-size: 1.3rem;
-      font-weight: 800;
-      color: var(--black);
-      letter-spacing: -0.02em;
-    }
-    .builder-resume-doc .resume-header .contact-line {
-      margin: 5px 0 0;
-      font-size: 0.78rem;
-      color: var(--gray-500);
-    }
-    .builder-resume-doc .resume-header .role-line {
-      margin: 3px 0 0;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-700);
-    }
-    .builder-resume-doc .resume-section {
-      margin-bottom: 16px;
-    }
-    .builder-resume-doc .resume-section h2 {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--black);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 5px;
-      margin-bottom: 10px;
-    }
-    .builder-resume-doc .resume-section p {
-      margin: 0;
-      font-size: 0.82rem;
-      white-space: pre-line;
-      color: var(--gray-800);
-    }
-
-    /* ── Preview entry (experience / education / project / cert) ── */
-    .preview-entry { margin-bottom: 10px; }
-    .preview-entry:last-child { margin-bottom: 0; }
-    .preview-entry-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 6px;
-    }
-    .preview-entry-head strong {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--black);
-    }
-    .preview-entry-head span {
-      font-size: 0.75rem;
-      color: var(--gray-500);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .preview-entry-sub {
-      font-size: 0.77rem;
-      color: var(--gray-500);
-      margin: 1px 0 3px;
-      font-style: italic;
-    }
-    .preview-entry-desc {
-      font-size: 0.79rem;
-      color: var(--gray-700);
-      white-space: pre-line;
-      margin: 3px 0 0;
-    }
-
-    /* ── Skills in preview ── */
-    .preview-skill-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-    .preview-skill-tag {
-      background: var(--gray-100);
-      color: var(--gray-700);
-      font-size: 0.73rem;
-      font-weight: 500;
-      padding: 2px 8px;
-      border-radius: var(--radius-xs);
-    }
-
-    /* ── Empty state ── */
-    .preview-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      text-align: center;
-      gap: 10px;
-      color: var(--gray-300);
-    }
-    .preview-empty i { font-size: 1.8rem; }
-    .preview-empty p { margin: 0; font-size: 0.82rem; }
-
-    /* ── Responsive: stack below 1060px ── */
-    @media (max-width: 1059px) {
-      .builder-layout {
-        grid-template-columns: 1fr;
-      }
-      .builder-preview-col {
-        position: static;
-        max-height: none;
-        order: -1;
-      }
-    }
-  </style>
 </head>
 
-<body>
+<body class="rw js-page rb-page">
 
-<nav class="navbar navbar-expand-lg app-nav">
+<nav class="navbar app-nav">
   <div class="container-fluid dashboard-shell">
     <div class="nav-left">
       <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
       <span class="nav-mode-pill">Job Seeker</span>
     </div>
-    <a href="/job_seeker" class="btn btn-outline-light btn-sm">
-      <i class="fa-solid fa-arrow-left"></i> Back
-    </a>
+    <div class="app-nav-links">
+      <a href="/job_seeker">Analyze resume</a>
+      <a href="/resume_builder" aria-current="page">Resume builder</a>
+    </div>
+    <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
   </div>
 </nav>
 
-<main class="dashboard-shell">
-
-  <!-- Hero Banner -->
-  <section class="dashboard-hero">
+<header class="rw-band">
+  <div class="dashboard-shell rw-band-inner rb-head">
     <div>
-      <span class="eyebrow">Resume Builder</span>
+      <span class="rw-kicker">Resume builder</span>
       <h1>Build an ATS-friendly resume with AI.</h1>
-      <p>Fill in the sections below. The preview updates live as you type. Submit to let AI enhance your summary, generate bullet points, and score your resume.</p>
+      <p>Fill in each section and watch the preview update as you type. When you're ready, AI polishes your summary, writes bullet points and scores the result.</p>
     </div>
-  </section>
 
-  <!-- Two-column layout: form + live preview -->
-  <div class="builder-layout">
+    <div class="rb-progress-card" aria-live="polite">
+      <div class="rb-progress-top">
+        <span>Resume completeness</span>
+        <strong id="rbPct">0%</strong>
+      </div>
+      <div class="rb-progress-track"><span id="rbBar"></span></div>
+      <small id="rbProgressLabel">0 of 8 sections complete</small>
+      <div class="rb-progress-actions">
+        <button type="submit" form="generate-resume-form" class="btn btn-primary">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Generate with AI
+        </button>
+        <button type="button" class="rw-btn-ghost" id="rbReset"><i class="fa-solid fa-eraser"></i> Start blank</button>
+      </div>
+    </div>
+  </div>
+</header>
 
-    <!-- ── Left: Form ── -->
-    <div class="builder-form-col">
-      <form id="generate-resume-form" action="/generate_resume" method="post" class="upload-form" onsubmit="prepareResumeData()">
+<main class="dashboard-shell rw-main">
 
-        <!-- Personal Information -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 1</span>
-            <h2>Personal Information</h2>
+  <div class="rb-layout">
+
+    <!-- ── Left: form ── -->
+    <div class="rb-form-col">
+
+      <!-- Section navigator -->
+      <nav class="rb-stepper" aria-label="Resume sections">
+        <a href="#sec-personal" data-sec="personal"><i class="fa-solid fa-check"></i> Personal</a>
+        <a href="#sec-target" data-sec="target"><i class="fa-solid fa-check"></i> Target job</a>
+        <a href="#sec-summary" data-sec="summary"><i class="fa-solid fa-check"></i> Summary</a>
+        <a href="#sec-skills" data-sec="skills"><i class="fa-solid fa-check"></i> Skills</a>
+        <a href="#sec-experience" data-sec="experience"><i class="fa-solid fa-check"></i> Experience</a>
+        <a href="#sec-education" data-sec="education"><i class="fa-solid fa-check"></i> Education</a>
+        <a href="#sec-projects" data-sec="projects"><i class="fa-solid fa-check"></i> Projects</a>
+        <a href="#sec-certs" data-sec="certs"><i class="fa-solid fa-check"></i> Certifications</a>
+      </nav>
+
+      <form id="generate-resume-form" action="/generate_resume" method="post" class="upload-form rb-form" onsubmit="prepareResumeData()">
+
+        <section class="rw-card rb-sec" id="sec-personal" data-sec="personal">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>1</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Personal information</h2>
+              <p>How employers will contact you.</p>
+            </div>
           </div>
-
           <div class="form-row">
             <div class="form-group">
-              <label for="full_name">Full Name</label>
+              <label for="full_name">Full name</label>
               <input type="text" id="full_name" name="full_name" placeholder="Aiman Hakimi" required>
             </div>
             <div class="form-group">
-              <label for="email">Email Address</label>
+              <label for="email">Email address</label>
               <input type="email" id="email" name="email" placeholder="aiman@email.com" required>
             </div>
           </div>
-
           <div class="form-row">
             <div class="form-group">
-              <label for="phone">Phone Number</label>
+              <label for="phone">Phone number</label>
               <input type="text" id="phone" name="phone" placeholder="012-3456789">
             </div>
             <div class="form-group">
@@ -255,104 +101,122 @@
               <input type="text" id="location" name="location" placeholder="Kuala Lumpur, Malaysia">
             </div>
           </div>
-
           <div class="form-group">
-            <label for="target_role">Target Role</label>
+            <label for="target_role">Target role</label>
             <input type="text" id="target_role" name="target_role" placeholder="Software Engineer">
           </div>
         </section>
 
-        <!-- Target Job Description -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 2</span>
-            <h2>Target Job Description</h2>
+        <section class="rw-card rb-sec" id="sec-target" data-sec="target">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>2</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Target job description</h2>
+              <p>Used to find skill gaps and suggest skills to add.</p>
+            </div>
           </div>
           <div class="form-group">
-            <label for="target_job_description">Job Description</label>
-            <textarea
-              id="target_job_description"
-              name="target_job_description"
-              rows="7"
-              placeholder="Paste the job description here. This helps the system identify skill gaps and suggest improvements based on the role you are applying for."></textarea>
-            <small style="color: var(--gray-400); font-size: 0.82rem;">
-              This helps the system identify skill gaps and suggest improvements based on the role you are applying for.
-            </small>
+            <label for="target_job_description">Job description</label>
+            <textarea id="target_job_description" name="target_job_description" rows="7"
+              placeholder="Paste the job description for the role you're applying to."></textarea>
           </div>
         </section>
 
-        <!-- Professional Summary -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 3</span>
-            <h2>Professional Summary</h2>
+        <section class="rw-card rb-sec" id="sec-summary" data-sec="summary">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>3</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Professional summary</h2>
+              <p>2–3 sentences about your background and what you bring.</p>
+            </div>
           </div>
           <div class="form-group">
-            <label for="summary">Write 2–3 sentences about yourself</label>
+            <div class="js-field-head">
+              <label for="summary">Summary</label>
+              <span class="js-wordcount" id="sumCount">0 words</span>
+            </div>
             <textarea id="summary" name="summary" rows="4" placeholder="Briefly describe your background, key skills, and what you bring to the role."></textarea>
+            <div class="js-meter" aria-hidden="true"><span id="sumMeter"></span></div>
+            <small class="muted" id="sumHint">Aim for 30–80 words. AI will polish the wording.</small>
           </div>
         </section>
 
-        <!-- Skills -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 4</span>
-            <h2>Skills</h2>
+        <section class="rw-card rb-sec" id="sec-skills" data-sec="skills">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>4</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Skills</h2>
+              <p>Press Enter to add. Aim for at least 5 relevant skills.</p>
+            </div>
+            <span class="rw-count" id="skillCount">0</span>
           </div>
           <div class="inline-add">
-            <input type="text" id="skillInput" placeholder="Example: Python">
+            <input type="text" id="skillInput" placeholder="Example: Python" aria-label="Add a skill">
             <button type="button" class="btn btn-primary" onclick="addSkill()">
               <i class="fa-solid fa-plus"></i> Add
             </button>
           </div>
           <div id="skillsList" class="builder-tag-list"></div>
+
+          <div class="rb-suggest" id="skillSuggest" hidden>
+            <span class="rb-suggest-label"><i class="fa-solid fa-wand-magic-sparkles"></i> From the job description:</span>
+            <div class="rb-suggest-list" id="skillSuggestList"></div>
+          </div>
         </section>
 
-        <!-- Work Experience -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 5</span>
-            <h2>Work Experience</h2>
+        <section class="rw-card rb-sec" id="sec-experience" data-sec="experience">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>5</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Work experience</h2>
+              <p>Write plainly. AI turns it into resume-style bullet points.</p>
+            </div>
           </div>
-          <div id="experienceContainer"></div>
-          <button type="button" class="btn btn-outline-primary" onclick="addExperience()">
-            <i class="fa-solid fa-plus"></i> Add Experience
+          <div id="experienceContainer" class="rb-blocks"></div>
+          <button type="button" class="rb-add" onclick="addExperience()">
+            <i class="fa-solid fa-plus"></i> Add experience
           </button>
         </section>
 
-        <!-- Education -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 6</span>
-            <h2>Education</h2>
+        <section class="rw-card rb-sec" id="sec-education" data-sec="education">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>6</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Education</h2>
+              <p>Degrees, diplomas and relevant qualifications.</p>
+            </div>
           </div>
-          <div id="educationContainer"></div>
-          <button type="button" class="btn btn-outline-primary" onclick="addEducation()">
-            <i class="fa-solid fa-plus"></i> Add Education
+          <div id="educationContainer" class="rb-blocks"></div>
+          <button type="button" class="rb-add" onclick="addEducation()">
+            <i class="fa-solid fa-plus"></i> Add education
           </button>
         </section>
 
-        <!-- Projects -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 7</span>
-            <h2>Projects</h2>
+        <section class="rw-card rb-sec" id="sec-projects" data-sec="projects">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>7</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Projects</h2>
+              <p>Show what you've built, the tools used and the outcome.</p>
+            </div>
           </div>
-          <div id="projectContainer"></div>
-          <button type="button" class="btn btn-outline-primary" onclick="addProject()">
-            <i class="fa-solid fa-plus"></i> Add Project
+          <div id="projectContainer" class="rb-blocks"></div>
+          <button type="button" class="rb-add" onclick="addProject()">
+            <i class="fa-solid fa-plus"></i> Add project
           </button>
         </section>
 
-        <!-- Certifications -->
-        <section class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Step 8</span>
-            <h2>Certifications</h2>
+        <section class="rw-card rb-sec" id="sec-certs" data-sec="certs">
+          <div class="rb-sec-head">
+            <span class="rb-num"><span>8</span><i class="fa-solid fa-check"></i></span>
+            <div>
+              <h2>Certifications</h2>
+              <p>Courses and certificates that support the role.</p>
+            </div>
           </div>
-          <div id="certificationContainer"></div>
-          <button type="button" class="btn btn-outline-primary" onclick="addCertification()">
-            <i class="fa-solid fa-plus"></i> Add Certification
+          <div id="certificationContainer" class="rb-blocks"></div>
+          <button type="button" class="rb-add" onclick="addCertification()">
+            <i class="fa-solid fa-plus"></i> Add certification
           </button>
         </section>
 
@@ -363,27 +227,32 @@
         <input type="hidden" name="projects_json"       id="projects_json">
         <input type="hidden" name="certifications_json" id="certifications_json">
 
-        <!-- Submit -->
-        <section class="workbench" style="margin-bottom: 40px;">
-          <p style="color: var(--gray-500); font-size: 0.9rem; margin: 0 0 20px;">
-            Once you submit, the AI will organise your information, improve your summary,
-            generate resume-style bullet points, and calculate your match score.
-          </p>
-          <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Resume with AI
+        <section class="rw-card js-builder-card rb-submit">
+          <span class="js-builder-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <h2>Ready to generate?</h2>
+          <ul class="rb-ai-list">
+            <li><i class="fa-solid fa-check"></i> Organises your information into ATS-friendly sections</li>
+            <li><i class="fa-solid fa-check"></i> Polishes your summary and writes bullet points</li>
+            <li><i class="fa-solid fa-check"></i> Scores your resume against the target job</li>
+          </ul>
+          <button type="submit" class="btn btn-light rw-btn-block rb-generate">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate resume with AI
           </button>
         </section>
 
       </form>
-    </div><!-- /.builder-form-col -->
+    </div>
 
-    <!-- ── Right: Live Preview ── -->
-    <div class="builder-preview-col">
-      <div class="preview-panel-header">
-        <span class="label">Live Preview</span>
-        <span class="preview-pulse">
+    <!-- ── Right: live preview ── -->
+    <aside class="rb-preview-col">
+      <div class="rb-preview-head">
+        <button type="button" class="rb-preview-toggle" id="previewToggle" aria-expanded="true" aria-controls="live-resume-preview">
+          <span class="label">Live preview</span>
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <span class="preview-pulse" id="previewPulse">
           <span class="preview-pulse-dot"></span>
-          Updates as you type
+          <span>Updates as you type</span>
         </span>
       </div>
       <div id="live-resume-preview" class="builder-resume-doc">
@@ -392,10 +261,9 @@
           <p>Your resume preview will appear here as you fill in the sections.</p>
         </div>
       </div>
-    </div><!-- /.builder-preview-col -->
+    </aside>
 
-  </div><!-- /.builder-layout -->
-
+  </div>
 </main>
 
 <!-- Generate loader overlay -->
@@ -409,6 +277,7 @@
 
 <script>
   let skills = [];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ── HTML escape helper ── */
   function escHtml(str) {
@@ -420,13 +289,13 @@
   }
 
   /* ── Skills ── */
-  function addSkill() {
+  function addSkill(value) {
     const input = document.getElementById('skillInput');
-    const skill = input.value.trim();
-    if (skill && !skills.includes(skill)) {
+    const skill = (value !== undefined ? value : input.value).trim();
+    if (skill && !skills.some(s => s.toLowerCase() === skill.toLowerCase())) {
       skills.push(skill);
-      input.value = '';
-      renderSkills();
+      if (value === undefined) input.value = '';
+      renderSkills(skill);
       updatePreview();
     }
   }
@@ -435,15 +304,16 @@
     if (e.key === 'Enter') { e.preventDefault(); addSkill(); }
   });
 
-  function renderSkills() {
+  function renderSkills(justAdded) {
     const list = document.getElementById('skillsList');
     list.innerHTML = '';
     skills.forEach((skill, index) => {
       const tag = document.createElement('span');
-      tag.className = 'builder-tag';
-      tag.innerHTML = `${escHtml(skill)} <button type="button" onclick="removeSkill(${index})">×</button>`;
+      tag.className = 'builder-tag' + (skill === justAdded ? ' is-new' : '');
+      tag.innerHTML = `${escHtml(skill)} <button type="button" onclick="removeSkill(${index})" aria-label="Remove ${escHtml(skill)}">×</button>`;
       list.appendChild(tag);
     });
+    document.getElementById('skillCount').textContent = skills.length;
   }
 
   function removeSkill(index) {
@@ -452,13 +322,80 @@
     updatePreview();
   }
 
+  /* Suggest skills that appear in the target job description but aren't listed yet */
+  const KNOWN_SKILLS = [
+    // Only names that aren't also everyday English words ("go", "express", "excel at"…)
+    'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C#', 'Golang', 'PHP', 'Kotlin',
+    'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'SQLite', 'Redis', 'Database Management',
+    'HTML', 'CSS', 'React', 'Angular', 'Vue', 'Node.js', 'Next.js', 'Bootstrap', 'Tailwind',
+    'Flask', 'Django', 'FastAPI', 'Spring Boot', 'Laravel', 'REST API', 'GraphQL',
+    'Git', 'GitHub', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Cloud Platforms', 'CI/CD', 'Linux',
+    'Machine Learning', 'Deep Learning', 'NLP', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'scikit-learn',
+    'Data Analysis', 'Statistics', 'Tableau', 'Power BI', 'Microsoft Excel', 'Spark',
+    'Software Testing', 'Unit Testing', 'Debugging', 'Agile', 'Scrum', 'Jira',
+    'Problem Solving', 'Communication', 'Teamwork', 'Leadership', 'Project Management'
+  ];
+  function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function updateSuggestions() {
+    const jd = document.getElementById('target_job_description').value;
+    const have = skills.map(s => s.toLowerCase());
+    const found = KNOWN_SKILLS.filter(skill =>
+      !have.includes(skill.toLowerCase()) &&
+      new RegExp('(^|[^a-z0-9+#])' + escRegex(skill.toLowerCase()) + '(?![a-z0-9+#])', 'i').test(jd)
+    ).slice(0, 12);
+
+    const box = document.getElementById('skillSuggest');
+    box.hidden = !found.length;
+    document.getElementById('skillSuggestList').innerHTML = found
+      .map(s => `<button type="button" class="rb-suggest-chip" data-skill="${escHtml(s)}"><i class="fa-solid fa-plus"></i> ${escHtml(s)}</button>`)
+      .join('');
+  }
+  document.getElementById('skillSuggestList').addEventListener('click', e => {
+    const chip = e.target.closest('.rb-suggest-chip');
+    if (chip) addSkill(chip.dataset.skill);
+  });
+
   /* ── Dynamic blocks ── */
-  function addExperience() {
-    const container = document.getElementById('experienceContainer');
+  function blockHead(label) {
+    return `
+      <div class="rb-block-head">
+        <span class="rb-block-label">${label} <b class="rb-block-n"></b></span>
+        <button type="button" class="remove-block" onclick="removeBlock(this)" aria-label="Remove ${label.toLowerCase()}">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>`;
+  }
+
+  function appendBlock(containerId, className, label, inner) {
+    const container = document.getElementById(containerId);
     const block = document.createElement('div');
-    block.className = 'dynamic-block experience-block';
-    block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
+    block.className = 'dynamic-block ' + className + (reduceMotion ? '' : ' is-entering');
+    block.innerHTML = blockHead(label) + inner;
+    container.appendChild(block);
+    block.addEventListener('animationend', () => block.classList.remove('is-entering'), { once: true });
+    numberBlocks();
+    updatePreview();
+    return block;
+  }
+
+  function removeBlock(button) {
+    const block = button.closest('.dynamic-block');
+    const done = () => { block.remove(); numberBlocks(); updatePreview(); };
+    if (reduceMotion) return done();
+    block.style.height = block.offsetHeight + 'px';
+    block.classList.add('is-leaving');
+    requestAnimationFrame(() => { block.style.height = '0px'; });
+    setTimeout(done, 260);
+  }
+
+  function numberBlocks() {
+    document.querySelectorAll('.rb-blocks').forEach(c => {
+      c.querySelectorAll('.rb-block-n').forEach((n, i) => { n.textContent = i + 1; });
+    });
+  }
+
+  function addExperience() {
+    return appendBlock('experienceContainer', 'experience-block', 'Experience', `
       <div class="form-row">
         <div class="form-group">
           <label>Company</label>
@@ -476,68 +413,50 @@
       <div class="form-group">
         <label>What did you do?</label>
         <textarea class="exp-description" rows="4" placeholder="Write a few sentences. AI will convert this into resume-style bullet points."></textarea>
-      </div>`;
-    container.appendChild(block);
-    updatePreview();
+      </div>`);
   }
 
   function addEducation() {
-    const container = document.getElementById('educationContainer');
-    const block = document.createElement('div');
-    block.className = 'dynamic-block education-block';
-    block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
+    return appendBlock('educationContainer', 'education-block', 'Education', `
       <div class="form-row">
         <div class="form-group">
-          <label>School / University</label>
+          <label>School / university</label>
           <input type="text" class="edu-school" placeholder="Example: International Islamic University Malaysia">
         </div>
         <div class="form-group">
-          <label>Degree / Qualification</label>
+          <label>Degree / qualification</label>
           <input type="text" class="edu-degree" placeholder="Example: Bachelor of Computer Science">
         </div>
       </div>
       <div class="form-group">
         <label>Period</label>
         <input type="text" class="edu-period" placeholder="Example: 2022 - 2026">
-      </div>`;
-    container.appendChild(block);
-    updatePreview();
+      </div>`);
   }
 
   function addProject() {
-    const container = document.getElementById('projectContainer');
-    const block = document.createElement('div');
-    block.className = 'dynamic-block project-block';
-    block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
+    return appendBlock('projectContainer', 'project-block', 'Project', `
       <div class="form-row">
         <div class="form-group">
-          <label>Project Title</label>
+          <label>Project title</label>
           <input type="text" class="project-title" placeholder="Example: AI-Based Resume Screening System">
         </div>
         <div class="form-group">
-          <label>Tools / Technologies</label>
+          <label>Tools / technologies</label>
           <input type="text" class="project-tools" placeholder="Example: Python, Flask, NLP, Bootstrap">
         </div>
       </div>
       <div class="form-group">
-        <label>Project Description</label>
+        <label>Project description</label>
         <textarea class="project-description" rows="4" placeholder="Briefly describe the project, your role, and the outcome."></textarea>
-      </div>`;
-    container.appendChild(block);
-    updatePreview();
+      </div>`);
   }
 
   function addCertification() {
-    const container = document.getElementById('certificationContainer');
-    const block = document.createElement('div');
-    block.className = 'dynamic-block certification-block';
-    block.innerHTML = `
-      <button type="button" class="remove-block" onclick="this.parentElement.remove(); updatePreview()">×</button>
+    return appendBlock('certificationContainer', 'certification-block', 'Certification', `
       <div class="form-row">
         <div class="form-group">
-          <label>Certification Name</label>
+          <label>Certification name</label>
           <input type="text" class="cert-name" placeholder="Example: Google Data Analytics Certificate">
         </div>
         <div class="form-group">
@@ -548,13 +467,11 @@
       <div class="form-group">
         <label>Year</label>
         <input type="text" class="cert-year" placeholder="Example: 2025">
-      </div>`;
-    container.appendChild(block);
-    updatePreview();
+      </div>`);
   }
 
   /* ── Live preview renderer ── */
-  function updatePreview() {
+  function renderPreview() {
     const name      = document.getElementById('full_name').value.trim();
     const email     = document.getElementById('email').value.trim();
     const phone     = document.getElementById('phone').value.trim();
@@ -577,11 +494,9 @@
       return;
     }
 
-    /* contact line: join non-empty parts with bullet separator */
     const contactParts = [email, phone, location].filter(Boolean);
     const contactLine = contactParts.map(escHtml).join(' &nbsp;·&nbsp; ');
 
-    /* skills */
     let skillsHtml = '';
     if (skills.length) {
       const tags = skills.map(s => `<span class="preview-skill-tag">${escHtml(s)}</span>`).join('');
@@ -592,7 +507,6 @@
         </div>`;
     }
 
-    /* experience */
     let expHtml = '';
     document.querySelectorAll('.experience-block').forEach(b => {
       const company = b.querySelector('.exp-company').value.trim();
@@ -611,7 +525,6 @@
         </div>`;
     });
 
-    /* education */
     let eduHtml = '';
     document.querySelectorAll('.education-block').forEach(b => {
       const school = b.querySelector('.edu-school').value.trim();
@@ -628,7 +541,6 @@
         </div>`;
     });
 
-    /* projects */
     let projHtml = '';
     document.querySelectorAll('.project-block').forEach(b => {
       const title = b.querySelector('.project-title').value.trim();
@@ -645,7 +557,6 @@
         </div>`;
     });
 
-    /* certifications */
     let certHtml = '';
     document.querySelectorAll('.certification-block').forEach(b => {
       const certName  = b.querySelector('.cert-name').value.trim();
@@ -681,7 +592,67 @@
     `;
   }
 
-  /* ── Bubble input events from form to updatePreview ── */
+  /* ── Completeness: which sections are done ── */
+  const val = id => document.getElementById(id).value.trim();
+  const words = text => text ? text.split(/\s+/).length : 0;
+  const anyFilled = (sel, fields) => [...document.querySelectorAll(sel)].some(b => fields.some(f => b.querySelector(f).value.trim()));
+
+  function sectionStatus() {
+    return {
+      personal:   !!(val('full_name') && val('email')),
+      target:     words(val('target_job_description')) >= 20,
+      summary:    words(val('summary')) >= 15,
+      skills:     skills.length >= 5,
+      experience: anyFilled('.experience-block', ['.exp-company', '.exp-role']),
+      education:  anyFilled('.education-block', ['.edu-school', '.edu-degree']),
+      projects:   anyFilled('.project-block', ['.project-title']),
+      certs:      anyFilled('.certification-block', ['.cert-name']),
+    };
+  }
+
+  function updateProgress() {
+    const status = sectionStatus();
+    const keys = Object.keys(status);
+    const done = keys.filter(k => status[k]).length;
+    const pct = Math.round((done / keys.length) * 100);
+
+    document.getElementById('rbPct').textContent = pct + '%';
+    document.getElementById('rbBar').style.width = pct + '%';
+    document.getElementById('rbProgressLabel').textContent =
+      done === keys.length ? 'All 8 sections complete. Looking strong!' : `${done} of ${keys.length} sections complete`;
+
+    keys.forEach(k => {
+      document.querySelectorAll(`[data-sec="${k}"]`).forEach(el => el.classList.toggle('is-done', status[k]));
+    });
+
+    const sw = words(val('summary'));
+    document.getElementById('sumCount').textContent = sw + (sw === 1 ? ' word' : ' words');
+    const meter = document.getElementById('sumMeter');
+    meter.style.width = Math.min(sw / 80, 1) * 100 + '%';
+    meter.dataset.level = sw === 0 ? 'low' : sw < 30 ? 'low' : sw <= 80 ? 'good' : 'over';
+    document.getElementById('sumHint').textContent =
+      sw === 0 ? 'Aim for 30–80 words. AI will polish the wording.'
+      : sw < 30 ? 'A little more detail will help the AI write a stronger summary.'
+      : sw <= 80 ? 'Good length for a resume summary.'
+      : 'That\'s quite long. Recruiters skim, so consider trimming it.';
+  }
+
+  /* Gentle "updated" flash on the preview pulse */
+  let pulseTimer;
+  function flashPulse() {
+    const pulse = document.getElementById('previewPulse');
+    pulse.classList.add('is-updating');
+    clearTimeout(pulseTimer);
+    pulseTimer = setTimeout(() => pulse.classList.remove('is-updating'), 600);
+  }
+
+  function updatePreview() {
+    renderPreview();
+    updateProgress();
+    updateSuggestions();
+    flashPulse();
+  }
+
   document.getElementById('generate-resume-form').addEventListener('input', updatePreview);
 
   /* ── Serialize hidden fields on submit ── */
@@ -719,6 +690,51 @@
     document.getElementById('certifications_json').value = JSON.stringify(certifications);
   }
 
+  /* ── Start blank: clear the sample data ── */
+  document.getElementById('rbReset').addEventListener('click', () => {
+    if (!confirm('Clear all fields and start a blank resume?')) return;
+    ['full_name', 'email', 'phone', 'location', 'target_role', 'target_job_description', 'summary', 'skillInput']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    skills = [];
+    renderSkills();
+    document.querySelectorAll('.dynamic-block').forEach(b => b.remove());
+    addExperience();
+    addEducation();
+    updatePreview();
+    document.getElementById('sec-personal').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    document.getElementById('full_name').focus({ preventScroll: true });
+  });
+
+  /* ── Section navigator: highlight the section in view ── */
+  const stepLinks = [...document.querySelectorAll('.rb-stepper a')];
+  stepLinks.forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }));
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const sec = entry.target.dataset.sec;
+        stepLinks.forEach(a => {
+          const on = a.dataset.sec === sec;
+          a.classList.toggle('is-active', on);
+          if (on) a.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    document.querySelectorAll('.rb-sec').forEach(s => io.observe(s));
+  }
+
+  /* ── Collapsible preview on small screens ── */
+  const previewToggle = document.getElementById('previewToggle');
+  previewToggle.addEventListener('click', () => {
+    const open = previewToggle.getAttribute('aria-expanded') !== 'true';
+    previewToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.querySelector('.rb-preview-col').classList.toggle('is-collapsed', !open);
+  });
+  if (window.matchMedia('(max-width: 1059px)').matches) previewToggle.click();
+
   /* ── Demo data for FYP prototype showcase ── */
   window.addEventListener('load', function () {
     document.getElementById('full_name').value   = 'Aiman Hakimi';
@@ -744,8 +760,7 @@
     ];
     renderSkills();
 
-    addExperience();
-    const expBlock = document.querySelector('.experience-block');
+    const expBlock = addExperience();
     expBlock.querySelector('.exp-company').value     = 'TechNova Solutions';
     expBlock.querySelector('.exp-role').value        = 'Software Development Intern';
     expBlock.querySelector('.exp-period').value      = 'June 2025 - September 2025';
@@ -755,28 +770,29 @@
       'I fixed bugs reported by users and tested features before deployment. ' +
       'I also used GitHub to collaborate with other developers and manage code changes.';
 
-    addEducation();
-    const eduBlock = document.querySelector('.education-block');
+    const eduBlock = addEducation();
     eduBlock.querySelector('.edu-school').value = 'International Islamic University Malaysia';
     eduBlock.querySelector('.edu-degree').value = 'Bachelor of Computer Science';
     eduBlock.querySelector('.edu-period').value = '2022 - 2026';
 
-    addProject();
-    const projectBlock = document.querySelector('.project-block');
+    const projectBlock = addProject();
     projectBlock.querySelector('.project-title').value       = 'AI-Based Resume Screening System';
     projectBlock.querySelector('.project-tools').value       = 'Python, Flask, NLP, TF-IDF, Cosine Similarity, Bootstrap, SQLite';
     projectBlock.querySelector('.project-description').value =
       'Developed a web-based resume screening system that compares resumes with job descriptions. ' +
       'The system extracts resume text, identifies matched and missing skills, calculates match scores, and displays ranking results.';
 
-    addCertification();
-    const certBlock = document.querySelector('.certification-block');
+    const certBlock = addCertification();
     certBlock.querySelector('.cert-name').value     = 'Python for Everybody';
     certBlock.querySelector('.cert-provider').value = 'University of Michigan, Coursera';
     certBlock.querySelector('.cert-year').value     = '2024';
 
-    /* Initial preview render */
     updatePreview();
+
+    if (!reduceMotion) {
+      document.body.classList.add('rw-anim');
+      document.querySelectorAll('.rb-sec, .rb-submit').forEach((el, i) => el.style.setProperty('--i', Math.min(i, 6)));
+    }
 
     /* Loader on submit */
     const genForm   = document.getElementById('generate-resume-form');

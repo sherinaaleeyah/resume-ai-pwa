@@ -809,7 +809,8 @@ def get_ranked_candidates(job_id):
         # 2. Fetch Candidate Scores
         rows = conn.execute(
             """
-            SELECT id, candidate_name, file_name, score, matched_skills, missing_skills, summary
+            SELECT id, candidate_name, file_name, score, matched_skills, missing_skills, summary,
+                   keyword_score, semantic_score
             FROM candidate_scores
             WHERE job_id = ?
             ORDER BY score DESC, id DESC
@@ -842,6 +843,9 @@ def get_ranked_candidates(job_id):
             "missing": missing,
             "summary": summary,
             "strength": match_strength(row["score"]),
+            # Component scores let the recruiter page preview re-ranking live as the weight slider moves
+            "keyword_score": row["keyword_score"],
+            "semantic_score": row["semantic_score"],
         })
     return candidates
 

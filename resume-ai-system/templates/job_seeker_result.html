@@ -3,353 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resume Analysis Results - TalentMatch</title>
+  <title>Resume Match Results · TalentMatch</title>
+  <meta name="theme-color" content="#0f0f14">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <style>
-    /* ── Score ring (full circle, score inside) ── */
-    .score-ring-wrap {
-      position: relative;
-      width: 150px;
-      height: 150px;
-      flex-shrink: 0;
-    }
-    .score-ring-wrap svg {
-      width: 150px;
-      height: 150px;
-      transform: rotate(-90deg); /* start arc from top */
-    }
-    .score-ring-track {
-      fill: none;
-      stroke: rgba(255,255,255,0.12);
-      stroke-width: 10;
-    }
-    .score-ring-fill {
-      fill: none;
-      stroke-width: 10;
-      stroke-linecap: round;
-      stroke-dasharray: 0 408;
-      transition: stroke-dasharray 1.1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
-    }
-    .score-ring-inner {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-    }
-    .score-ring-num {
-      font-size: 2.4rem;
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.04em;
-      /* colour set by JS */
-    }
-    .score-ring-pct {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.45);
-    }
-    .score-ring-band {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: rgba(255,255,255,0.55);
-      text-align: center;
-      margin-top: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    /* ── AI Feedback structured cards ── */
-    .feedback-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 4px;
-    }
-    .feedback-card {
-      background: var(--gray-50);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .feedback-card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .feedback-card-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-xs);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      flex-shrink: 0;
-    }
-    .feedback-card-icon.good   { background: #f0fdf4; color: #15803d; }
-    .feedback-card-icon.warn   { background: #fff7ed; color: #c2410c; }
-    .feedback-card-icon.tip    { background: var(--accent-light); color: var(--accent); }
-    .feedback-card-title {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--black);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .feedback-points {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 7px;
-    }
-    .feedback-points li {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      font-size: 0.875rem;
-      color: var(--gray-600);
-      line-height: 1.55;
-    }
-    .feedback-points li i {
-      font-size: 0.7rem;
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-    .fp-good { color: #15803d; }
-    .fp-warn { color: #c2410c; }
-    .fp-tip  { color: var(--accent); }
-    /* Fallback: plain paragraph if JS can't parse */
-    .feedback-raw {
-      font-size: 0.9rem;
-      color: var(--gray-600);
-      line-height: 1.7;
-    }
-  </style>
 </head>
-<body>
+<body class="rw js-page">
 
-  <nav class="navbar navbar-expand-lg app-nav">
+  <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
         <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
         <span class="nav-mode-pill">Job Seeker</span>
       </div>
-      <a href="/job_seeker" class="btn btn-outline-light btn-sm">
-        <i class="fa-solid fa-arrow-left"></i> Back
-      </a>
+      <div class="app-nav-links">
+        <a href="/job_seeker" aria-current="page">Analyze resume</a>
+        <a href="/resume_builder">Resume builder</a>
+      </div>
+      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
     </div>
   </nav>
 
-  <main class="dashboard-shell">
+  {% if error %}
 
-    {% if error %}
-
-      <section class="workbench" style="margin-top: 32px;">
-        <h2>Error</h2>
-        <p>{{ error }}</p>
-      </section>
-
-    {% else %}
-
-      {% set _s = score | float %}
-      {% if _s >= 85 %}
-        {% set _band = 'Excellent Match' %}
-      {% elif _s >= 70 %}
-        {% set _band = 'Good Match' %}
-      {% elif _s >= 55 %}
-        {% set _band = 'Fair Match' %}
-      {% elif _s >= 40 %}
-        {% set _band = 'Weak Match' %}
-      {% else %}
-        {% set _band = 'Poor Match' %}
-      {% endif %}
-
-      <!-- Results Header with ring score -->
-      <section class="results-header">
-        <div>
-          <span class="eyebrow">Resume Match Analysis</span>
-          <h1>Your Resume Match Score</h1>
-          <p>Calculated using skill matching and resume-to-job description similarity.</p>
-        </div>
-
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <div class="score-ring-wrap">
-            <!-- r=65 → circumference = 2π×65 ≈ 408.41 -->
-            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-              <circle class="score-ring-track" cx="75" cy="75" r="65"/>
-              <circle class="score-ring-fill" id="score-ring-fill" cx="75" cy="75" r="65"/>
-            </svg>
-            <div class="score-ring-inner">
-              <span class="score-ring-num" id="score-ring-num">{{ score }}</span>
-              <span class="score-ring-pct">Match %</span>
-            </div>
-          </div>
-          <div class="score-ring-band">{{ _band }}</div>
-        </div>
-      </section>
-
-      <script>
-        (function () {
-          var score = {{ _s }};
-          var pct   = Math.min(Math.max(score, 0), 100) / 100;
-          var circ  = 408.41; /* 2 * π * 65 */
-
-          var colour;
-          if      (score >= 85) colour = "#22c55e";
-          else if (score >= 70) colour = "#84cc16";
-          else if (score >= 55) colour = "#f59e0b";
-          else if (score >= 40) colour = "#f97316";
-          else                  colour = "#ef4444";
-
-          setTimeout(function () {
-            var ring = document.getElementById("score-ring-fill");
-            var num  = document.getElementById("score-ring-num");
-            if (ring) {
-              ring.style.stroke           = colour;
-              ring.style.strokeDasharray  = (pct * circ) + " " + circ;
-            }
-            if (num) { num.style.color = colour; }
-          }, 80);
-        })();
-      </script>
-
-      <!-- AI Feedback — structured cards from backend -->
-      <section class="workbench">
-        <div class="section-heading">
-          <span class="eyebrow">Explainable AI</span>
-          <h2>AI Explanation and Improvement Advice</h2>
-        </div>
-
-        <div class="feedback-grid">
-
-          {% if ai_feedback.strengths %}
-          <div class="feedback-card">
-            <div class="feedback-card-header">
-              <div class="feedback-card-icon good"><i class="fa-solid fa-circle-check"></i></div>
-              <span class="feedback-card-title">What's Working</span>
-            </div>
-            <ul class="feedback-points">
-              {% for point in ai_feedback.strengths %}
-              <li><i class="fa-solid fa-check fp-good"></i>{{ point }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
-
-          {% if ai_feedback.gaps %}
-          <div class="feedback-card">
-            <div class="feedback-card-header">
-              <div class="feedback-card-icon warn"><i class="fa-solid fa-triangle-exclamation"></i></div>
-              <span class="feedback-card-title">Gaps &amp; Weaknesses</span>
-            </div>
-            <ul class="feedback-points">
-              {% for point in ai_feedback.gaps %}
-              <li><i class="fa-solid fa-xmark fp-warn"></i>{{ point }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
-
-          {% if ai_feedback.recommendations %}
-          <div class="feedback-card">
-            <div class="feedback-card-header">
-              <div class="feedback-card-icon tip"><i class="fa-solid fa-lightbulb"></i></div>
-              <span class="feedback-card-title">Recommendations</span>
-            </div>
-            <ul class="feedback-points">
-              {% for point in ai_feedback.recommendations %}
-              <li><i class="fa-solid fa-arrow-right fp-tip"></i>{{ point }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
-
-        </div>
-      </section>
-
-      <!-- Matched / Missing Skills -->
-      <div class="content-grid">
-
-        <article>
-          <div class="icon-chip"><i class="fa-solid fa-circle-check"></i></div>
-          <h3>Matched Skills</h3>
-          <div class="skill-list">
-            {% if matched %}
-              {% for skill in matched %}
-                <span class="skill-tag matched-skill">{{ skill }}</span>
-              {% endfor %}
-            {% else %}
-              <span class="muted">No strong matched skills detected.</span>
-            {% endif %}
-          </div>
-        </article>
-
-        <article>
-          <div class="icon-chip"><i class="fa-solid fa-triangle-exclamation"></i></div>
-          <h3>Missing Skills / Skill Gaps</h3>
-          <div class="skill-list">
-            {% if missing %}
-              {% for skill in missing %}
-                <span class="skill-tag missing-skill">{{ skill }}</span>
-              {% endfor %}
-            {% else %}
-              <span class="muted">No major missing skills detected.</span>
-            {% endif %}
-          </div>
-        </article>
-
+    <header class="rw-band">
+      <div class="dashboard-shell rw-band-inner">
+        <nav class="rw-crumbs" aria-label="Breadcrumb">
+          <a href="/job_seeker">Job seeker</a>
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          <span aria-current="page">Analysis</span>
+        </nav>
       </div>
+    </header>
+    <main class="dashboard-shell rw-main">
+      <section class="rw-card rw-empty js-error">
+        <span class="rw-empty-icon js-error-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <h3>We couldn't analyze that resume</h3>
+        <p>{{ error }}</p>
+        <a href="/job_seeker#analyze" class="btn btn-primary"><i class="fa-solid fa-rotate-left"></i> Try again</a>
+      </section>
+    </main>
 
-      <!-- ATS Structure Check -->
-      <section class="workbench">
-        <div class="section-heading">
-          <span class="eyebrow">ATS Structure Check</span>
-          <h2>Resume Section Analysis</h2>
+  {% else %}
+
+    {% set _s = score | float %}
+    {% set _si = _s | round | int %}
+    {% if _s >= 85 %}{% set _band = 'Excellent match' %}{% set _tone = 'good' %}
+    {% elif _s >= 70 %}{% set _band = 'Good match' %}{% set _tone = 'good' %}
+    {% elif _s >= 55 %}{% set _band = 'Fair match' %}{% set _tone = 'warn' %}
+    {% elif _s >= 40 %}{% set _band = 'Weak match' %}{% set _tone = 'warn' %}
+    {% else %}{% set _band = 'Poor match' %}{% set _tone = 'bad' %}{% endif %}
+    {% set _total_skills = (matched|length) + (missing|length) %}
+    {% set _coverage = ((matched|length) / _total_skills * 100)|round|int if _total_skills > 0 else 0 %}
+    {% set _ats_ok = ats_feedback|selectattr('status', 'equalto', 'Detected')|list|length %}
+
+    <header class="rw-band rw-band-overlap">
+      <div class="dashboard-shell rw-band-inner">
+        <div class="rw-band-top">
+          <nav class="rw-crumbs" aria-label="Breadcrumb">
+            <a href="/job_seeker">Job seeker</a>
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            <span aria-current="page">Match analysis</span>
+          </nav>
+          <a href="/job_seeker#analyze" class="rw-btn-ghost"><i class="fa-solid fa-rotate-left"></i> Analyze another</a>
         </div>
 
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Section</th>
-                <th>Status</th>
-                <th>Feedback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in ats_feedback %}
-              <tr>
-                <td>{{ item.section }}</td>
-                <td>
-                  {% if item.status == "Detected" %}
-                    <span class="status status-good">Detected</span>
-                  {% else %}
-                    <span class="status status-review">Missing</span>
-                  {% endif %}
-                </td>
-                <td>{{ item.message }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="jr-head">
+          <div>
+            <span class="rw-kicker">Resume match analysis</span>
+            <h1>Your resume is a <span class="jr-band jr-band-{{ _tone }}">{{ _band }}</span></h1>
+            <p>Based on how many of the role's required skills your resume shows, and how closely its overall content matches the job description.</p>
+          </div>
+
+          <div class="jr-ring" data-score="{{ _s }}" role="img" aria-label="Match score {{ _si }} percent, {{ _band }}">
+            <svg viewBox="0 0 150 150" aria-hidden="true">
+              <circle class="jr-ring-track" cx="75" cy="75" r="65"/>
+              <circle class="jr-ring-fill" id="jrRingFill" cx="75" cy="75" r="65"/>
+            </svg>
+            <div class="jr-ring-inner">
+              <strong id="jrRingNum">{{ _si }}</strong>
+              <span>Match %</span>
+            </div>
+          </div>
         </div>
+      </div>
+    </header>
+
+    <main class="dashboard-shell rw-main">
+
+      <section class="rw-kpis" aria-label="Analysis summary">
+        <article class="rw-kpi">
+          <div class="rw-kpi-top"><span>Matched skills</span><i class="fa-solid fa-circle-check jr-i-good"></i></div>
+          <strong>{{ matched|length }}</strong>
+          <small>of {{ _total_skills }} required</small>
+        </article>
+        <article class="rw-kpi">
+          <div class="rw-kpi-top"><span>Skill gaps</span><i class="fa-solid fa-triangle-exclamation jr-i-bad"></i></div>
+          <strong>{{ missing|length }}</strong>
+          <small>Skills to add or highlight</small>
+        </article>
+        <article class="rw-kpi">
+          <div class="rw-kpi-top"><span>Skill coverage</span><i class="fa-solid fa-chart-pie"></i></div>
+          <div class="rw-kpi-gauge-row">
+            <strong>{{ _coverage }}%</strong>
+            <div class="gauge" style="--score: {{ _coverage }};" aria-hidden="true"></div>
+          </div>
+          <small>Required skills found</small>
+        </article>
+        <article class="rw-kpi rw-kpi-feature">
+          <div class="rw-kpi-top"><span>ATS structure</span><i class="fa-solid fa-list-check"></i></div>
+          <strong>{{ _ats_ok }}/{{ ats_feedback|length }}</strong>
+          <small>Standard sections detected</small>
+        </article>
       </section>
 
-    {% endif %}
+      <!-- AI feedback: three columns, full width -->
+      <section class="rw-card rp-feedback">
+        <div class="rw-card-head">
+          <div>
+            <h2>AI explanation &amp; advice</h2>
+            <p>Why you scored {{ _si }}%, and what would raise it.</p>
+          </div>
+        </div>
 
-  </main>
+        {% set _fb_tabs = [
+          ('strengths', "What's working", 'fa-circle-check', 'good', 'fa-check'),
+          ('gaps', 'Gaps', 'fa-triangle-exclamation', 'bad', 'fa-xmark'),
+          ('recommendations', 'Recommendations', 'fa-lightbulb', 'tip', 'fa-arrow-right')
+        ] %}
+        {% set _has_fb = ai_feedback.strengths or ai_feedback.gaps or ai_feedback.recommendations %}
+
+        {% if _has_fb %}
+          <div class="fb-grid">
+            {% for key, label, icon, tone, bullet in _fb_tabs if ai_feedback[key] %}
+              <div class="fb-col fb-col-{{ tone }}">
+                <div class="fb-col-head">
+                  <span class="fb-col-icon"><i class="fa-solid {{ icon }}"></i></span>
+                  <h3>{{ label }}</h3>
+                  <span class="fb-col-count">{{ ai_feedback[key]|length }}</span>
+                </div>
+                <ul class="jr-points jr-points-{{ tone }}">
+                  {% for point in ai_feedback[key] %}
+                    <li style="--i: {{ loop.index0 }}"><i class="fa-solid {{ bullet }}"></i><span>{{ point }}</span></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="rw-empty rw-empty-sm">
+            <span class="rw-empty-icon"><i class="fa-solid fa-comment-slash"></i></span>
+            <p>AI feedback isn't available for this analysis. Your score and skill breakdown below are still accurate.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- ATS structure: above the skill breakdown -->
+      <section class="rw-card rp-ats">
+        <div class="rw-card-head rw-card-head-sm">
+          <div>
+            <h2><i class="fa-solid fa-list-check"></i> ATS structure check</h2>
+            <p>{{ _ats_ok }} of {{ ats_feedback|length }} standard sections detected</p>
+          </div>
+        </div>
+        <ul class="jr-ats">
+          {% for item in ats_feedback %}
+            {% set _ok = item.status == "Detected" %}
+            <li class="{{ 'is-ok' if _ok else 'is-missing' }}">
+              <span class="jr-ats-icon"><i class="fa-solid {{ 'fa-check' if _ok else 'fa-exclamation' }}"></i></span>
+              <div>
+                <strong>{{ item.section }}</strong>
+                <small>{{ 'Detected' if _ok else 'Not clearly detected. Add a "' ~ item.section ~ '" heading.' }}</small>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <div class="jr-grid">
+        <div class="rw-col-main">
+
+          <!-- Skills -->
+          <section class="rw-card">
+            <div class="rw-card-head">
+              <div>
+                <h2>Skill breakdown</h2>
+                <p>Tick off gaps as you add them to your resume.</p>
+              </div>
+              <span class="rw-count">{{ _coverage }}% coverage</span>
+            </div>
+
+            <div class="jr-coverage" aria-hidden="true">
+              <span class="jr-cov-good" style="width: {{ _coverage }}%"></span>
+            </div>
+
+            <div class="jr-skill-cols">
+              <div>
+                <h3 class="jr-skill-head jr-good"><i class="fa-solid fa-circle-check"></i> Matched <span>{{ matched|length }}</span></h3>
+                <div class="skill-list">
+                  {% if matched %}
+                    {% for skill in matched %}
+                      <span class="skill-tag matched-skill">{{ skill }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <span class="muted">No strong matched skills detected.</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div>
+                <h3 class="jr-skill-head jr-bad"><i class="fa-solid fa-triangle-exclamation"></i> Missing <span>{{ missing|length }}</span></h3>
+                {% if missing %}
+                  <div class="jr-gap-list" id="gapList">
+                    {% for skill in missing %}
+                      <button type="button" class="jr-gap" aria-pressed="false">
+                        <i class="fa-regular fa-square"></i><i class="fa-solid fa-square-check"></i>
+                        <span>{{ skill }}</span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                  <div class="js-progress">
+                    <div class="js-meter"><span id="gapMeter"></span></div>
+                    <small id="gapLabel" aria-live="polite">0 of {{ missing|length }} gaps addressed</small>
+                  </div>
+                {% else %}
+                  <span class="muted">No major missing skills detected.</span>
+                {% endif %}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="rw-col-side">
+          <!-- Next steps -->
+          <section class="rw-card js-builder-card">
+            <span class="js-builder-icon"><i class="fa-solid fa-pen-ruler"></i></span>
+            <h2>Ready to improve it?</h2>
+            <p>Rebuild your resume with standard ATS sections and AI-written content, then run the analysis again.</p>
+            <a href="/resume_builder" class="btn btn-light rw-btn-block">Open resume builder <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="/job_seeker#analyze" class="jr-again">Analyze another resume</a>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+  {% endif %}
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -357,6 +257,82 @@
         navigator.serviceWorker.register("/service-worker.js");
       });
     }
+
+    (function () {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // Score ring: fill + count up, coloured by score band
+      const ring = document.querySelector(".jr-ring");
+      if (ring) {
+        const score = Math.min(Math.max(parseFloat(ring.dataset.score) || 0, 0), 100);
+        const circ = 408.41; // 2 * π * 65
+        const colour = score >= 85 ? "#22c55e" : score >= 70 ? "#84cc16" : score >= 55 ? "#f59e0b" : score >= 40 ? "#f97316" : "#ef4444";
+        const fill = document.getElementById("jrRingFill");
+        const num = document.getElementById("jrRingNum");
+        fill.style.stroke = colour;
+        num.style.color = colour;
+        const finalText = num.textContent;
+
+        if (reduceMotion) {
+          fill.style.strokeDasharray = `${(score / 100) * circ} ${circ}`;
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            fill.style.strokeDasharray = `${(score / 100) * circ} ${circ}`;
+          }));
+          const start = performance.now();
+          const step = (now) => {
+            const p = Math.min((now - start) / 1100, 1);
+            num.textContent = Math.round(score * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(step); else num.textContent = finalText;
+          };
+          num.textContent = "0";
+          requestAnimationFrame(step);
+        }
+      }
+
+
+      // Skill gap checklist
+      const gaps = [...document.querySelectorAll(".jr-gap")];
+      function updateGaps() {
+        const done = gaps.filter((g) => g.getAttribute("aria-pressed") === "true").length;
+        const meter = document.getElementById("gapMeter");
+        if (!meter) return;
+        meter.style.width = (gaps.length ? (done / gaps.length) * 100 : 0) + "%";
+        document.getElementById("gapLabel").textContent =
+          done === gaps.length ? `All ${gaps.length} gaps addressed. Time to re-run the analysis!`
+          : `${done} of ${gaps.length} gaps addressed`;
+      }
+      gaps.forEach((g) => g.addEventListener("click", () => {
+        g.setAttribute("aria-pressed", g.getAttribute("aria-pressed") === "true" ? "false" : "true");
+        updateGaps();
+      }));
+      updateGaps();
+
+      if (!reduceMotion) {
+        document.body.classList.add("rw-anim");
+        document.querySelectorAll(".rw-kpi, .rp-feedback, .rp-ats, .rw-col-main > .rw-card, .rw-col-side > .rw-card").forEach((el, i) => el.style.setProperty("--i", i));
+
+        document.querySelectorAll(".rw-kpi strong").forEach((el) => {
+          const m = el.textContent.trim().match(/^(\d+)(.*)$/);
+          if (!m) return;
+          const end = +m[1], suffix = m[2], start = performance.now();
+          const step = (now) => {
+            const p = Math.min((now - start) / 900, 1);
+            el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3))) + suffix;
+            if (p < 1) requestAnimationFrame(step);
+          };
+          el.textContent = "0" + suffix;
+          requestAnimationFrame(step);
+        });
+
+        document.querySelectorAll(".rw-kpi .gauge, .jr-coverage span").forEach((el) => {
+          const prop = el.classList.contains("gauge") ? "--score" : "width";
+          const target = el.style.getPropertyValue(prop);
+          el.style.setProperty(prop, prop === "width" ? "0%" : "0");
+          requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty(prop, target)));
+        });
+      }
+    })();
   </script>
 
 </body>

@@ -3,33 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hiring Intelligence Dashboard</title>
+  <title>{% if selected_job %}{{ selected_job.title }} · {% endif %}Recruiter · TalentMatch</title>
+  <meta name="theme-color" content="#0f0f14">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
-<body>
-  <nav class="navbar navbar-expand-lg app-nav">
+<body class="rw">
+  <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
         <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
         <span class="nav-mode-pill">Recruiter</span>
       </div>
-      <a class="btn btn-outline-light btn-sm" href="/"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <div class="app-nav-links">
+        <a href="{{ url_for('recruiter') }}" {% if not selected_job %}aria-current="page"{% endif %}>Dashboard</a>
+        <a href="{{ url_for('recruiter') }}#job-form">New job</a>
+      </div>
+      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
     </div>
   </nav>
 
-  <main class="dashboard-shell">
-    {% if selected_job %}
-      <section class="job-detail-header" style="align-items: start;">
-        <div>
-          <span class="eyebrow">Candidate Ranking</span>
+  {% if selected_job %}
+  {# ═══════════════════════════ JOB DETAIL ═══════════════════════════ #}
+  <header class="rw-band">
+    <div class="dashboard-shell rw-band-inner">
+      <div class="rw-band-top">
+        <nav class="rw-crumbs" aria-label="Breadcrumb">
+          <a href="{{ url_for('recruiter') }}">Dashboard</a>
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          <span aria-current="page">{{ selected_job.title }}</span>
+        </nav>
+        <a href="#job-details" class="rw-btn-ghost" data-open-details="job-details">
+          <i class="fa-solid fa-pen"></i> Edit job
+        </a>
+      </div>
+
+      <div class="rw-job-head">
+        <div class="rw-job-title">
+          <span class="rw-kicker">Candidate ranking</span>
           <h1>{{ selected_job.title }}</h1>
-          <p>{{ selected_job.company }}</p>
-          
-          <div class="header-detected-skills">
-            <span class="skills-eyebrow">Extracted Skills</span>
+          <p><i class="fa-regular fa-building"></i> {{ selected_job.company }}</p>
+
+          <div class="rw-band-skills">
+            <span class="rw-band-label">Required skills</span>
             <div class="skill-list">
               {% if required_skills %}
                 {% for skill in required_skills %}
@@ -40,80 +58,193 @@
               {% endif %}
             </div>
           </div>
-
         </div>
-        <div class="job-header-metrics" aria-label="Job scoring metrics">
-          <div>
-            <strong>{{ job_metrics.total_candidates }}</strong>
-            <span>Total Candidates</span>
-          </div>
-          <div>
-            <strong>{{ job_metrics.top_score }}</strong>
-            <span>Top Score</span>
-          </div>
-          <div>
-            <strong>{{ job_metrics.average_score }}</strong>
-            <span>Avg Score</span>
-          </div>
-        </div>
-        <a class="btn btn-outline-primary" href="{{ url_for('recruiter') }}">
-          <i class="fa-solid fa-table-columns"></i> Dashboard
-        </a>
-        <details class="job-description-dropdown">
-            <summary>View full job description</summary>
-            <div class="description-content">
-              <form id="edit-job-form" action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form">
-                <div class="form-group">
-                  <label for="edit-title">Job Title</label>
-                  <input id="edit-title" type="text" name="title" value="{{ selected_job.title }}" required>
-                </div>
-                <div class="form-group">
-                  <label for="edit-company">Company</label>
-                  <input id="edit-company" type="text" name="company" value="{{ selected_job.company }}" required>
-                </div>
-                <div class="form-group">
-                  <label for="edit-description">Job Description</label>
-                  <textarea id="edit-description" name="description" rows="10" required>{{ selected_job.description }}</textarea>
-                </div>
-                <button type="submit" class="btn btn-primary submit-btn">
-                  <i class="fa-solid fa-floppy-disk"></i> Save Changes
-                </button>
-              </form>
-            </div>
-          </details>
 
-      </section>
+        <dl class="rw-stats" aria-label="Job scoring metrics">
+          <div><dt>Candidates</dt><dd>{{ job_metrics.total_candidates }}</dd></div>
+          <div><dt>Top score</dt><dd data-stat="top">{{ job_metrics.top_score }}</dd></div>
+          <div><dt>Avg score</dt><dd data-stat="avg">{{ job_metrics.average_score }}</dd></div>
+        </dl>
+      </div>
+    </div>
+  </header>
 
-    <section class="job-review-grid{% if required_skills and ranked_candidates %} two-col{% endif %}">
-        <article class="workbench">
-          <div class="section-heading">
-            <span class="eyebrow">Upload Zone</span>
-            <h2>Rank resumes for this job</h2>
+  <main class="dashboard-shell rw-main">
+    <div class="rw-job-grid">
+
+      <!-- Main column: results -->
+      <div class="rw-col-main">
+        <section class="rw-card">
+          <div class="rw-card-head">
+            <div>
+              <h2>Ranked candidates</h2>
+              <p>Sorted by match score against this job's requirements.</p>
+            </div>
+            <span class="rw-count">{{ ranked_candidates|length }} scored</span>
           </div>
-          {% set kw_pct = (selected_job.keyword_weight * 100) | round | int %}
-          <form id="weight-form" action="{{ url_for('update_job_weights', job_id=selected_job.id) }}" method="post" class="weight-form">
-            <div class="weight-form-header">
-              <label for="keyword-weight">Scoring weight</label>
-              <button type="button" id="weight-reset" class="btn btn-link btn-sm p-0">Reset</button>
+
+          {% if ranked_candidates %}
+            <div class="rw-toolbar">
+              <label class="rw-search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span class="visually-hidden">Search candidates</span>
+                <input type="search" id="candSearch" placeholder="Search name, file or skill" autocomplete="off">
+              </label>
+              <div class="rw-chips" role="group" aria-label="Filter by match strength">
+                <button type="button" class="rw-chip is-active" data-filter="all" aria-pressed="true">All <span data-chip-count="all"></span></button>
+                <button type="button" class="rw-chip" data-filter="good" aria-pressed="false">Strong / good <span data-chip-count="good"></span></button>
+                <button type="button" class="rw-chip" data-filter="warn" aria-pressed="false">Moderate <span data-chip-count="warn"></span></button>
+                <button type="button" class="rw-chip" data-filter="bad" aria-pressed="false">Needs review <span data-chip-count="bad"></span></button>
+              </div>
             </div>
-            <input id="keyword-weight" type="range" name="keyword_weight" min="0" max="100" step="5" value="{{ kw_pct }}" class="form-range">
-            <div class="weight-labels">
-              <span>Skill Precision <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How well their skills match the job's required skills"></i> <strong id="keyword-weight-value">{{ kw_pct }}%</strong></span>
-              <span>Profile Relevance <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How similar their overall experience is to the role"></i> <strong id="semantic-weight-value">{{ 100 - kw_pct }}%</strong></span>
+
+            <div class="rw-preview-note" id="rankPreviewNote" role="status" hidden>
+              <i class="fa-solid fa-eye"></i>
+              <span>Previewing ranking at <b data-preview-weight></b>. Click <b>Apply</b> to save it.</span>
             </div>
-            <div class="weight-form-footer">
-              <small>Click Apply to re-rank existing candidates.</small>
-              <button type="submit" id="weight-apply" class="btn btn-primary btn-sm" disabled>
-                <i class="fa-solid fa-check"></i> Apply
-              </button>
+
+            <ol class="rw-cand-list" id="candList">
+              {% for candidate in ranked_candidates %}
+                {% set _s = candidate.score | float %}
+                {% if _s >= 85 %}{% set _rc = '#16a34a' %}
+                {% elif _s >= 70 %}{% set _rc = '#65a30d' %}
+                {% elif _s >= 55 %}{% set _rc = '#d97706' %}
+                {% elif _s >= 40 %}{% set _rc = '#ea580c' %}
+                {% else %}{% set _rc = '#dc2626' %}{% endif %}
+                {% if candidate.strength == 'Strong match' %}{% set _tone = 'good' %}
+                {% elif candidate.strength == 'Good match' %}{% set _tone = 'good' %}
+                {% elif candidate.strength == 'Moderate match' %}{% set _tone = 'warn' %}
+                {% else %}{% set _tone = 'bad' %}{% endif %}
+                <li class="rw-cand"
+                    data-tone="{{ _tone }}"
+                    data-kw="{{ candidate.keyword_score if candidate.keyword_score is not none else '' }}"
+                    data-sem="{{ candidate.semantic_score if candidate.semantic_score is not none else '' }}"
+                    data-search="{{ (candidate.candidate_name ~ ' ' ~ candidate.file_name ~ ' ' ~ (candidate.matched|join(' ')) ~ ' ' ~ (candidate.missing|join(' ')))|lower }}">
+                  <div class="rw-cand-main">
+                    <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-n{% endif %}" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
+
+                    <div class="rw-cand-info">
+                      <div class="rw-cand-name">
+                        <h3>{{ candidate.candidate_name }}</h3>
+                        <span class="rw-status rw-status-{{ _tone }}">{{ candidate.strength }}</span>
+                      </div>
+                      <p class="rw-cand-meta">
+                        <span><i class="fa-regular fa-file-lines"></i> {{ candidate.file_name }}</span>
+                        <span class="rw-ok"><i class="fa-solid fa-check"></i> {{ candidate.matched|length }} matched</span>
+                        <span class="rw-miss"><i class="fa-solid fa-xmark"></i> {{ candidate.missing|length }} missing</span>
+                      </p>
+                    </div>
+
+                    <div class="score-ring" aria-label="Match score {{ candidate.score }}%">
+                      <svg viewBox="0 0 52 52" class="score-ring-svg" aria-hidden="true">
+                        <circle cx="26" cy="26" r="20" class="score-ring-track"/>
+                        <circle cx="26" cy="26" r="20" class="score-ring-fill"
+                          style="stroke-dasharray: {{ (_s / 100 * 125.66) | round(1) }} 125.66; stroke: {{ _rc }};"/>
+                      </svg>
+                      <div class="score-ring-label">
+                        <span class="score-ring-num">{{ candidate.score }}</span>
+                        <span class="score-ring-pct">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <details class="candidate-details">
+                    <summary>AI summary &amp; skill breakdown</summary>
+                    <p>{{ candidate.summary }}</p>
+
+                    <div class="rw-skill-cols">
+                      <div>
+                        <h4>Matched skills ({{ candidate.matched|length }})</h4>
+                        <div class="skill-list">
+                          {% if candidate.matched %}
+                            {% for skill in candidate.matched %}
+                              <span class="skill-tag matched-skill">{{ skill }}</span>
+                            {% endfor %}
+                          {% else %}
+                            <span class="muted">No matched required skills</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Missing skills ({{ candidate.missing|length }})</h4>
+                        <div class="skill-list">
+                          {% if candidate.missing %}
+                            {% for skill in candidate.missing %}
+                              <span class="skill-tag missing-skill">{{ skill }}</span>
+                            {% endfor %}
+                          {% else %}
+                            <span class="muted">No missing required skills</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="card-footer-actions">
+                      <form action="{{ url_for('delete_candidate', job_id=selected_job['id'], candidate_id=candidate['id']) }}" method="post"
+                            onsubmit="return confirm('Remove {{ candidate.candidate_name|e }} from this ranking?');">
+                        <button class="btn btn-outline-danger btn-sm" type="submit">
+                          <i class="fa-solid fa-trash"></i> 
+                        </button>
+                      </form>
+                    </div>
+                  </details>
+                </li>
+              {% endfor %}
+            </ol>
+            <div class="rw-empty rw-empty-sm" id="candFilterEmpty" hidden>
+              <span class="rw-empty-icon"><i class="fa-solid fa-filter-circle-xmark"></i></span>
+              <p>No candidates match this search or filter.</p>
             </div>
+          {% else %}
+            <div class="rw-empty">
+              <span class="rw-empty-icon"><i class="fa-solid fa-ranking-star"></i></span>
+              <h3>No candidates scored yet</h3>
+              <p>Upload resumes in the <strong>Add resumes</strong> panel to build the ranking.</p>
+            </div>
+          {% endif %}
+        </section>
+
+        <details id="job-details" class="rw-card rw-collapsible">
+          <summary>
+            <span><i class="fa-regular fa-file-lines"></i> Job description &amp; details</span>
+            <i class="fa-solid fa-chevron-down rw-chevron" aria-hidden="true"></i>
+          </summary>
+          <form id="edit-job-form" action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form rw-collapsible-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="edit-title">Job title</label>
+                <input id="edit-title" type="text" name="title" value="{{ selected_job.title }}" required>
+              </div>
+              <div class="form-group">
+                <label for="edit-company">Company</label>
+                <input id="edit-company" type="text" name="company" value="{{ selected_job.company }}" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="edit-description">Job description</label>
+              <textarea id="edit-description" name="description" rows="10" required>{{ selected_job.description }}</textarea>
+              <small class="muted">Changing the description re-extracts skills and re-scores existing candidates.</small>
+            </div>
+            <button type="submit" class="btn btn-primary submit-btn">
+              <i class="fa-solid fa-floppy-disk"></i> Save changes
+            </button>
           </form>
+        </details>
+      </div>
 
+      <!-- Side column: actions & analysis -->
+      <aside class="rw-col-side">
+        <section class="rw-card">
+          <div class="rw-card-head rw-card-head-sm">
+            <h2><i class="fa-solid fa-cloud-arrow-up"></i> Add resumes</h2>
+          </div>
           <form id="resume-rank-form" action="{{ url_for('rank_job_resumes', job_id=selected_job.id) }}" method="post" enctype="multipart/form-data" class="upload-form">
-            <div class="form-group file-zone">
-              <label for="resumes">Upload PDF or DOCX resumes</label>
+            <div class="form-group file-zone" id="dropZone">
+              <span class="rw-drop-icon" aria-hidden="true"><i class="fa-solid fa-file-arrow-up"></i></span>
+              <span class="rw-drop-title">Drag &amp; drop resumes here</span>
+              <label for="resumes">or choose PDF / DOCX files</label>
               <input id="resumes" type="file" name="resumes" accept=".pdf,.docx" multiple required>
-              <small>Upload multiple resumes together. Confirm or edit each candidate name before scoring.</small>
+              <small>Select several at once. You'll confirm each candidate's name before scoring.</small>
             </div>
 
             <div class="modal fade" id="candidateNameModal" tabindex="-1" aria-labelledby="candidateNameModalLabel" aria-hidden="true">
@@ -131,112 +262,49 @@
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                      <i class="fa-solid fa-check"></i> Confirm Names
+                      <i class="fa-solid fa-check"></i> Confirm names
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary submit-btn">
-              <i class="fa-solid fa-ranking-star"></i> Rank Candidates
+            <button type="submit" class="btn btn-primary rw-btn-block">
+              <i class="fa-solid fa-ranking-star"></i> Rank candidates
             </button>
           </form>
+        </section>
 
-          <section class="ranked-candidates-section">
-            <div class="section-heading">
-              <span class="eyebrow">Ranked Candidates</span>
-              <h2>{{ ranked_candidates|length }} scored</h2>
+        <section class="rw-card">
+          {% set kw_pct = (selected_job.keyword_weight * 100) | round | int %}
+          <form id="weight-form" action="{{ url_for('update_job_weights', job_id=selected_job.id) }}" method="post" class="weight-form">
+            <div class="weight-form-header">
+              <label for="keyword-weight"><i class="fa-solid fa-sliders"></i> Scoring weight</label>
+              <button type="button" id="weight-reset" class="rw-link-btn">Reset</button>
             </div>
-
-            {% if ranked_candidates %}
-              <div class="ranked-candidate-list">
-                {% for candidate in ranked_candidates %}
-                
-                  <article class="ranked-candidate-card">
-                    <div class="ranked-candidate-main">
-                      <div class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}" aria-label="Rank {{ loop.index }}">{{ loop.index }}</div>
-                      <div class="ranked-candidate-info">
-                        <h3>{{ candidate.candidate_name }}</h3>
-
-                        <span class="status status-good">{{ candidate.strength }}</span>
-                        <p>{{ candidate.file_name }} • {{ candidate.matched|length }} matched • {{ candidate.missing|length }} missing</p>
-                      </div>
-                      {% set _s = candidate.score | float %}
-                      {% if _s >= 85 %}{% set _rc = '#22c55e' %}
-                      {% elif _s >= 70 %}{% set _rc = '#84cc16' %}
-                      {% elif _s >= 55 %}{% set _rc = '#f59e0b' %}
-                      {% elif _s >= 40 %}{% set _rc = '#f97316' %}
-                      {% else %}{% set _rc = '#ef4444' %}{% endif %}
-                      <div class="score-ring" aria-label="Match score {{ candidate.score }}%">
-                        <svg viewBox="0 0 52 52" class="score-ring-svg">
-                          <circle cx="26" cy="26" r="20" class="score-ring-track"/>
-                          <circle cx="26" cy="26" r="20" class="score-ring-fill"
-                            style="stroke-dasharray: {{ (_s / 100 * 125.66) | round(1) }} 125.66; stroke: {{ _rc }};"/>
-                        </svg>
-                        <div class="score-ring-label">
-                          <span class="score-ring-num">{{ candidate.score }}</span>
-                          <span class="score-ring-pct">%</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <details class="candidate-details">
-                      <summary>AI summary</summary>
-                      <p>{{ candidate.summary }}</p>
-
-                      <h4>Matched skills ({{ candidate.matched|length }})</h4>
-                      <div class="skill-list">
-                        {% if candidate.matched %}
-                          {% for skill in candidate.matched %}
-                            <span class="skill-tag matched-skill">{{ skill }}</span>
-                          {% endfor %}
-                        {% else %}
-                          <span class="muted">No matched required skills</span>
-                        {% endif %}
-                      </div>
-
-                      <h4>Missing skills ({{ candidate.missing|length }})</h4>
-                      <div class="skill-list">
-                        {% if candidate.missing %}
-                          {% for skill in candidate.missing %}
-                            <span class="skill-tag missing-skill">{{ skill }}</span>
-                          {% endfor %}
-                        {% else %}
-                          <span class="muted">No missing required skills</span>
-                        {% endif %}
-                      </div>
-                    
-                      <div class="card-footer-actions">
-                      <!-- Candidate Actions (Delete Button) -->
-                        <form action="{{ url_for('delete_candidate', job_id=selected_job['id'], candidate_id=candidate['id']) }}" method="post">
-                            <button class="btn btn-outline-danger btn-sm" type="submit">
-                                 <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
-                        </div>
-                    </details>
-                  </article>
-                {% endfor %}
-              </div>
-            {% else %}
-
-              <div class="empty-dashboard compact-empty">
-                <i class="fa-solid fa-ranking-star"></i>
-                <p>No candidates scored yet. Upload resumes above to build the ranking.</p>
-              </div>
-            {% endif %}
-          </section>
-        </article>
+            <input id="keyword-weight" type="range" name="keyword_weight" min="0" max="100" step="5" value="{{ kw_pct }}" class="form-range">
+            <div class="weight-labels">
+              <span>Skill Precision <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How well their skills match the job's required skills"></i> <strong id="keyword-weight-value">{{ kw_pct }}%</strong></span>
+              <span>Profile Relevance <i class="fa-solid fa-circle-info weight-info" tabindex="0" data-bs-toggle="tooltip" data-bs-title="How similar their overall experience is to the role"></i> <strong id="semantic-weight-value">{{ 100 - kw_pct }}%</strong></span>
+            </div>
+            <div class="weight-form-footer">
+              <small>Apply to re-rank existing candidates.</small>
+              <button type="submit" id="weight-apply" class="btn btn-primary btn-sm" disabled>
+                <i class="fa-solid fa-check"></i> Apply
+              </button>
+            </div>
+          </form>
+        </section>
 
         {% if required_skills and ranked_candidates %}
-        <aside class="pool-analysis-panel">
-          <div class="section-heading">
-            <span class="eyebrow">Pool Analysis</span>
-            <h2>Skill Gap Coverage</h2>
+        <section class="rw-card">
+          <div class="rw-card-head rw-card-head-sm">
+            <div>
+              <h2><i class="fa-solid fa-chart-column"></i> Skill coverage</h2>
+              <p>Across {{ ranked_candidates|length }} ranked candidate{{ 's' if ranked_candidates|length != 1 else '' }}</p>
+            </div>
           </div>
-          <p class="skill-gap-subtitle">Coverage across {{ ranked_candidates|length }} ranked candidate{{ 's' if ranked_candidates|length != 1 else '' }}</p>
-          <div class="skill-gap-grid">
+          <ul class="rw-coverage">
             {% for skill in required_skills %}
               {% set ns = namespace(count=0) %}
               {% for candidate in ranked_candidates %}
@@ -246,142 +314,139 @@
               {% endfor %}
               {% set total = ranked_candidates|length %}
               {% set pct = ((ns.count / total) * 100)|round|int if total > 0 else 0 %}
-              {% if pct >= 75 %}{% set bar_color = '#22c55e' %}
-              {% elif pct >= 40 %}{% set bar_color = '#f59e0b' %}
-              {% else %}{% set bar_color = '#ef4444' %}{% endif %}
-              <div class="skill-gap-item">
-                <div class="skill-gap-label">
-                  <span class="skill-gap-name" title="{{ skill }}">{{ skill }}</span>
-                  <span class="skill-gap-count">{{ ns.count }}/{{ total }}</span>
+              {% if pct >= 75 %}{% set tone = 'good' %}
+              {% elif pct >= 40 %}{% set tone = 'warn' %}
+              {% else %}{% set tone = 'bad' %}{% endif %}
+              <li class="rw-cov-{{ tone }}">
+                <div class="rw-cov-row">
+                  <span class="rw-cov-name" title="{{ skill }}">{{ skill }}</span>
+                  <span class="rw-cov-val">{{ ns.count }}/{{ total }} · <b>{{ pct }}%</b></span>
                 </div>
-                <div class="skill-gap-bar-track">
-                  <div class="skill-gap-bar-fill" style="width: {{ pct }}%; background: {{ bar_color }};"></div>
-                </div>
-                <span class="skill-gap-pct" style="color: {{ bar_color }};">{{ pct }}%</span>
-              </div>
+                <div class="rw-cov-track"><span style="width: {{ pct }}%;"></span></div>
+              </li>
             {% endfor %}
-          </div>
-        </aside>
+          </ul>
+        </section>
         {% endif %}
-      </section>
-    {% else %}
+      </aside>
+    </div>
+  </main>
 
-      <section class="dashboard-hero">
+  {% else %}
+  {# ═══════════════════════════ DASHBOARD ═══════════════════════════ #}
+  <header class="rw-band rw-band-overlap">
+    <div class="dashboard-shell rw-band-inner rw-dash-head">
+      <div>
+        <span class="rw-kicker">Recruiter workspace</span>
+        <h1>Hiring overview</h1>
+        <p>Track open postings, candidate quality and the latest screening activity in one place.</p>
+      </div>
+      <a class="btn btn-primary rw-btn-lg" href="#job-form"><i class="fa-solid fa-plus"></i> New job posting</a>
+    </div>
+  </header>
+
+  <main class="dashboard-shell rw-main">
+    <section class="rw-kpis" aria-label="Hiring health snapshot">
+      <article class="rw-kpi">
+        <div class="rw-kpi-top"><span>Open postings</span><i class="fa-solid fa-briefcase"></i></div>
+        <strong>{{ kpis.open_postings }}</strong>
+        <small>Active vacancies</small>
+      </article>
+
+      <article class="rw-kpi">
+        <div class="rw-kpi-top"><span>Candidates scored</span><i class="fa-solid fa-file-circle-check"></i></div>
+        <strong>{{ kpis.candidates_scored }}</strong>
+        <small>Across all roles</small>
+      </article>
+
+      <article class="rw-kpi rw-kpi-gauge">
+        <div class="rw-kpi-top"><span>Avg. match</span><i class="fa-solid fa-gauge-high"></i></div>
+        <div class="rw-kpi-gauge-row">
+          <strong>{{ kpis.average_match }}%</strong>
+          <div class="gauge" style="--score: {{ kpis.average_match }};" aria-hidden="true"></div>
+        </div>
+        <small>Applicant quality</small>
+      </article>
+
+      <article class="rw-kpi rw-kpi-feature">
+        <div class="rw-kpi-top"><span>Top candidate{% if kpis.top_candidate.is_demo %} · sample{% endif %}</span><i class="fa-solid fa-star"></i></div>
+        <strong class="rw-kpi-name">{{ kpis.top_candidate.name }}</strong>
+        <small>Score {{ kpis.top_candidate.score }} · {{ kpis.top_candidate.role }}</small>
+      </article>
+    </section>
+
+    <section class="rw-section">
+      <div class="rw-section-head">
         <div>
-          <span class="eyebrow">Recruiter Workspace</span>
-          <h1>Hiring health at a glance.</h1>
-          <p>Track open postings, candidate quality, role performance, and the latest screening activity from one recruiter dashboard.</p>
+          <h2>Job postings</h2>
+          <p>Open a posting to upload resumes and review its ranked shortlist.</p>
         </div>
-        <a class="btn btn-primary" href="#job-form"><i class="fa-solid fa-plus"></i> Create Job</a>
-      </section>
+        <span class="rw-count">{{ jobs|length }} active</span>
+      </div>
 
-      <section class="kpi-ribbon" aria-label="Hiring health snapshots">
-        <article class="kpi-card">
-          <div class="kpi-icon"><i class="fa-solid fa-briefcase"></i></div>
-          <span>Open Postings</span>
-          <strong>{{ kpis.open_postings }}</strong>
-          <small>Active vacancies</small>
-        </article>
+      {% if jobs %}
+        <div class="rw-jobs">
+          {% for job in jobs %}
+            <article class="rw-job">
+              <a class="rw-job-main" href="{{ url_for('job_detail', job_id=job.id) }}">
+                <span class="rw-job-icon"><i class="fa-solid fa-briefcase"></i></span>
+                <span class="rw-job-text">
+                  <strong>{{ job.title }}</strong>
+                  <span>{{ job.company }}</span>
+                </span>
+              </a>
 
-        <article class="kpi-card">
-          <div class="kpi-icon"><i class="fa-solid fa-file-circle-check"></i></div>
-          <span>Candidates Scored</span>
-          <strong>{{ kpis.candidates_scored }}</strong>
-          <small>Across all roles</small>
-        </article>
+              <div class="rw-job-tags skill-list">
+                {% if job.skills %}
+                  {% for skill in job.skills %}
+                    <span class="skill-tag">{{ skill }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="muted">No skill tags detected</span>
+                {% endif %}
+              </div>
 
-        <article class="kpi-card">
-          <div class="kpi-icon"><i class="fa-solid fa-gauge-high"></i></div>
-          <span>Avg. Match</span>
-          <div class="gauge" style="--score: {{ kpis.average_match }};">
-            <strong>{{ kpis.average_match }}%</strong>
-          </div>
-          <small>Applicant quality</small>
-        </article>
+              <dl class="rw-job-stats">
+                <div><dt>Candidates</dt><dd>{{ job.total_candidates }}</dd></div>
+                <div><dt>Top</dt><dd>{{ job.top_score }}</dd></div>
+                <div><dt>Average</dt><dd>{{ job.average_score }}</dd></div>
+              </dl>
 
-        <article class="kpi-card top-candidate-card">
-          <div class="kpi-icon"><i class="fa-solid fa-star"></i></div>
-          <span>Top Candidate{% if kpis.top_candidate.is_demo %} Sample{% endif %}</span>
-          <strong>{{ kpis.top_candidate.name }}</strong>
-          <div class="top-candidate-meta">
-            <span>Score: {{ kpis.top_candidate.score }}</span>
-            <span>{{ kpis.top_candidate.role }}</span>
-          </div>
-        </article>
-      </section>
-
-      <section class="dashboard-section">
-        <div class="section-heading">
-          <span class="eyebrow">Management Hub</span>
-          <h2>Active Job Postings</h2>
+              <div class="rw-job-actions">
+                <a class="btn btn-primary btn-sm" href="{{ url_for('job_detail', job_id=job.id) }}">
+                  Open <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post"
+                      onsubmit="return confirm('Delete the {{ job.title|e }} posting and its candidates?');">
+                  <button class="btn btn-outline-danger btn-sm" type="submit" aria-label="Delete {{ job.title }} job posting">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
         </div>
+      {% else %}
+        <div class="rw-card rw-empty">
+          <span class="rw-empty-icon"><i class="fa-solid fa-folder-open"></i></span>
+          <h3>No job postings yet</h3>
+          <p>Create your first posting below to start screening resumes.</p>
+        </div>
+      {% endif %}
+    </section>
 
-        {% if jobs %}
-          <div class="posting-list">
-            {% for job in jobs %}
-              <article class="posting-card">
-                <div class="posting-main">
-                  <div class="job-card-icon"><i class="fa-solid fa-briefcase"></i></div>
-                  <div>
-                    <h3>{{ job.title }}</h3>
-                    <p>{{ job.company }}</p>
-                    <div class="skill-list">
-                      {% if job.skills %}
-                        {% for skill in job.skills %}
-                          <span class="skill-tag">{{ skill }}</span>
-                        {% endfor %}
-                      {% else %}
-                        <span class="muted">No skill tags detected</span>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="posting-metrics">
-                  <div>
-                    <strong>{{ job.total_candidates }}</strong>
-                    <span>Total Candidates</span>
-                  </div>
-                  <div>
-                    <strong>{{ job.top_score }}</strong>
-                    <span>Top Score</span>
-                  </div>
-                  <div>
-                    <strong>{{ job.average_score }}</strong>
-                    <span>Average Score</span>
-                  </div>
-                </div>
-
-                <div class="posting-actions">
-                  <a class="btn btn-primary" href="{{ url_for('job_detail', job_id=job.id) }}">
-                    <i class="fa-solid fa-ranking-star"></i> View
-                  </a>
-                  <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post">
-                    <button class="btn btn-outline-danger" type="submit" aria-label="Delete {{ job.title }} job posting">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </form>
-                </div>
-              </article>
-            {% endfor %}
+    <div class="rw-dash-grid">
+      <section id="job-form" class="rw-card">
+        <div class="rw-card-head">
+          <div>
+            <h2>New job posting</h2>
+            <p>Paste the full description. Required skills are extracted automatically.</p>
           </div>
-        {% else %}
-          <div class="empty-dashboard">
-            <i class="fa-solid fa-folder-open"></i>
-            <p>No active job postings yet. Create the first role below.</p>
-          </div>
-        {% endif %}
-      </section>
-
-     <section id="job-form" class="workbench job-form-panel">
-        <div class="section-heading">
-          <span class="eyebrow">Job Creation</span>
-          <h2>Save a new job posting</h2>
         </div>
         <form action="{{ url_for('recruiter') }}" method="post" class="upload-form">
           <div class="form-row">
             <div class="form-group">
-              <label for="title">Job Title</label>
+              <label for="title">Job title</label>
               <input id="title" type="text" name="title" placeholder="Machine Learning Engineer" required>
             </div>
             <div class="form-group">
@@ -391,41 +456,46 @@
           </div>
 
           <div class="form-group">
-            <label for="description">Job Description</label>
+            <label for="description">Job description</label>
             <textarea id="description" name="description" rows="8" placeholder="Paste responsibilities, skills, tools, education, and experience requirements here." required></textarea>
           </div>
 
           <button type="submit" class="btn btn-primary submit-btn">
-            <i class="fa-solid fa-floppy-disk"></i> Save Job Posting
+            <i class="fa-solid fa-floppy-disk"></i> Save job posting
           </button>
         </form>
       </section>
 
-      <section class="activity-panel">
-        <div class="section-heading">
-          <span class="eyebrow">Recent Activity</span>
-          <h2>System Feed</h2>
+      <section class="rw-card">
+        <div class="rw-card-head">
+          <div>
+            <h2>Recent activity</h2>
+            <p>Latest postings, scoring and weight changes.</p>
+          </div>
         </div>
 
         {% if kpis.activities %}
-          <div class="activity-feed">
+          <ol class="rw-activity">
             {% for activity in kpis.activities %}
-              <article class="activity-item">
-                <div class="activity-dot"></div>
-                <p>{{ activity.message }} - {{ activity.date }}{% if activity.score is not none %} - Score: {{ activity.score }}{% endif %}</p>
-              </article>
+              <li>
+                <span class="rw-activity-dot" aria-hidden="true"></span>
+                <div>
+                  <p>{{ activity.message }}</p>
+                  <small>{{ activity.date }}{% if activity.score is not none %} · Score {{ activity.score }}{% endif %}</small>
+                </div>
+              </li>
             {% endfor %}
-          </div>
+          </ol>
         {% else %}
-          <div class="empty-dashboard">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <p>No recent activity yet. Candidate ranking events will appear here.</p>
+          <div class="rw-empty rw-empty-sm">
+            <span class="rw-empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            <p>No activity yet. Ranking events will appear here.</p>
           </div>
         {% endif %}
       </section>
-      
-    {% endif %}
+    </div>
   </main>
+  {% endif %}
 
   <!-- Ranking loader overlay -->
   <div id="ranking-loader" class="ranking-loader" hidden>
@@ -483,6 +553,17 @@
 
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => new bootstrap.Tooltip(el));
 
+    // "Edit job" in the header opens the collapsed details panel and scrolls to it
+    document.querySelectorAll("[data-open-details]").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        const panel = document.getElementById(link.dataset.openDetails);
+        if (!panel) return;
+        e.preventDefault();
+        panel.open = true;
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
     const weightForm = document.getElementById("weight-form");
     const weightSlider = document.getElementById("keyword-weight");
     if (weightForm && weightSlider) {
@@ -497,6 +578,7 @@
         semanticLabel.textContent = `${100 - weightSlider.value}%`;
         weightSlider.style.setProperty("--fill", `${weightSlider.value}%`);
         applyButton.disabled = weightSlider.value === initialWeight;
+        previewRanking(+weightSlider.value, weightSlider.value !== initialWeight);
       };
 
       weightSlider.style.setProperty("--fill", `${weightSlider.value}%`);
@@ -524,6 +606,176 @@
         rankingLoader.querySelector(".loader-title").textContent = "Re-scoring candidates";
         rankingLoader.removeAttribute("hidden");
       });
+    }
+
+    // ── Live ranking preview, filters, drag & drop and load motion ──
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const RING = 125.66;
+    const candList = document.getElementById("candList");
+    const candSearch = document.getElementById("candSearch");
+    const previewNote = document.getElementById("rankPreviewNote");
+    const savedStats = {};
+    let activeFilter = "all";
+
+    document.querySelectorAll("[data-stat]").forEach((el) => { savedStats[el.dataset.stat] = el.textContent; });
+    if (candList) [...candList.children].forEach((li, i) => { li.dataset.order = i; });
+
+    // Mirrors the server's ring colours and match_strength() thresholds
+    const ringColor = (s) => s >= 85 ? "#16a34a" : s >= 70 ? "#65a30d" : s >= 55 ? "#d97706" : s >= 40 ? "#ea580c" : "#dc2626";
+    const strength = (s) => s >= 85 ? ["Strong match", "good"] : s >= 70 ? ["Good match", "good"] : s >= 50 ? ["Moderate match", "warn"] : ["Needs review", "bad"];
+
+    function setRing(li, s) {
+      const fill = li.querySelector(".score-ring-fill");
+      fill.style.strokeDasharray = `${(s / 100 * RING).toFixed(1)} ${RING}`;
+      fill.style.stroke = ringColor(s);
+      li.querySelector(".score-ring-num").textContent = s;
+      li.querySelector(".score-ring").setAttribute("aria-label", `Match score ${s}%`);
+    }
+
+    // FLIP: animate rows from their old position to their new one after re-ordering
+    function flip(items, firstTops) {
+      if (reduceMotion) return;
+      items.forEach((li) => {
+        const dy = firstTops.get(li) - li.getBoundingClientRect().top;
+        if (!dy) return;
+        li.style.transition = "none";
+        li.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          li.style.transition = "transform 0.45s cubic-bezier(.2,.8,.2,1)";
+          li.style.transform = "";
+          li.addEventListener("transitionend", () => { li.style.transition = ""; }, { once: true });
+        }));
+      });
+    }
+
+    function previewRanking(pct, isPreview) {
+      if (!candList) return;
+      const items = [...candList.children];
+      if (items.some((li) => li.dataset.kw === "" || li.dataset.sem === "")) return;
+
+      const w = pct / 100;
+      const firstTops = new Map(items.map((li) => [li, li.getBoundingClientRect().top]));
+
+      items.forEach((li) => {
+        const s = Math.round(w * +li.dataset.kw + (1 - w) * +li.dataset.sem);
+        const [label, tone] = strength(s);
+        li.dataset.score = s;
+        li.dataset.tone = tone;
+        setRing(li, s);
+        const tag = li.querySelector(".rw-status");
+        tag.textContent = label;
+        tag.className = `rw-status rw-status-${tone}`;
+      });
+
+      items.sort((a, b) => b.dataset.score - a.dataset.score || a.dataset.order - b.dataset.order);
+      items.forEach((li, i) => {
+        const badge = li.querySelector(".rank-badge");
+        badge.textContent = i + 1;
+        badge.className = `rank-badge ${i < 3 ? "rank-" + (i + 1) : "rank-n"}`;
+        badge.setAttribute("aria-label", `Rank ${i + 1}`);
+        candList.appendChild(li);
+      });
+      flip(items, firstTops);
+
+      const scores = items.map((li) => +li.dataset.score);
+      document.querySelectorAll("[data-stat]").forEach((el) => {
+        el.textContent = !isPreview ? savedStats[el.dataset.stat]
+          : el.dataset.stat === "top" ? Math.max(...scores)
+          : Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      });
+
+      if (previewNote) {
+        previewNote.hidden = !isPreview;
+        previewNote.querySelector("[data-preview-weight]").textContent = `${pct}% skill precision / ${100 - pct}% profile relevance`;
+      }
+      refreshFilters();
+    }
+
+    function refreshFilters() {
+      if (!candList) return;
+      const q = (candSearch ? candSearch.value : "").trim().toLowerCase();
+      const counts = { all: 0, good: 0, warn: 0, bad: 0 };
+      let shown = 0;
+      [...candList.children].forEach((li) => {
+        const matchesQuery = !q || li.dataset.search.includes(q);
+        if (matchesQuery) { counts.all++; counts[li.dataset.tone]++; }
+        const show = matchesQuery && (activeFilter === "all" || li.dataset.tone === activeFilter);
+        li.hidden = !show;
+        if (show) shown++;
+      });
+      document.querySelectorAll("[data-chip-count]").forEach((el) => { el.textContent = counts[el.dataset.chipCount]; });
+      document.getElementById("candFilterEmpty").hidden = shown > 0;
+    }
+
+    document.querySelectorAll(".rw-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        activeFilter = chip.dataset.filter;
+        document.querySelectorAll(".rw-chip").forEach((c) => {
+          c.classList.toggle("is-active", c === chip);
+          c.setAttribute("aria-pressed", c === chip ? "true" : "false");
+        });
+        refreshFilters();
+      });
+    });
+    if (candSearch) candSearch.addEventListener("input", refreshFilters);
+    refreshFilters();
+
+    // Drag & drop resumes onto the upload zone
+    const dropZone = document.getElementById("dropZone");
+    if (dropZone && resumeInput) {
+      ["dragenter", "dragover"].forEach((type) => dropZone.addEventListener(type, (e) => {
+        e.preventDefault();
+        dropZone.classList.add("is-dragover");
+      }));
+      dropZone.addEventListener("dragleave", (e) => {
+        if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove("is-dragover");
+      });
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("is-dragover");
+        const files = [...e.dataTransfer.files].filter((f) => /\.(pdf|docx)$/i.test(f.name));
+        if (!files.length) return;
+        const dt = new DataTransfer();
+        files.forEach((f) => dt.items.add(f));
+        resumeInput.files = dt.files;
+        resumeInput.dispatchEvent(new Event("change"));
+      });
+    }
+
+    // Load motion: count-up numbers, fill rings / bars / gauge, staggered entrance
+    if (!reduceMotion) {
+      document.body.classList.add("rw-anim");
+
+      [".rw-kpi", ".rw-job", ".rw-cand", ".rw-col-side > .rw-card", ".rw-dash-grid > .rw-card"].forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el, i) => el.style.setProperty("--i", Math.min(i, 8)));
+      });
+
+      document.querySelectorAll(".rw-kpi strong:not(.rw-kpi-name), .rw-stats dd, .rw-job-stats dd").forEach((el) => {
+        const m = el.textContent.trim().match(/^(\d+(?:\.\d+)?)(.*)$/);
+        if (!m) return;
+        const end = parseFloat(m[1]);
+        const suffix = m[2];
+        const decimals = (m[1].split(".")[1] || "").length;
+        const start = performance.now();
+        const step = (now) => {
+          const p = Math.min((now - start) / 900, 1);
+          el.textContent = (end * (1 - Math.pow(1 - p, 3))).toFixed(decimals) + suffix;
+          if (p < 1) requestAnimationFrame(step);
+        };
+        el.textContent = (0).toFixed(decimals) + suffix;
+        requestAnimationFrame(step);
+      });
+
+      const grow = (els, prop, from) => {
+        els.forEach((el) => {
+          const target = el.style.getPropertyValue(prop) || el.style[prop];
+          el.style.setProperty(prop, from);
+          requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty(prop, target)));
+        });
+      };
+      grow(document.querySelectorAll(".score-ring-fill"), "stroke-dasharray", `0 ${RING}`);
+      grow(document.querySelectorAll(".rw-cov-track span"), "width", "0%");
+      grow(document.querySelectorAll(".rw-kpi .gauge"), "--score", "0");
     }
   </script>
 </body>
