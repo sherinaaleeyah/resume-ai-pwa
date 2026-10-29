@@ -14,7 +14,7 @@
   <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
-        <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
+        <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
         <span class="nav-mode-pill">Recruiter</span>
       </div>
       <div class="app-nav-links">
@@ -742,41 +742,6 @@
       });
     }
 
-    // Load motion: count-up numbers, fill rings / bars / gauge, staggered entrance
-    if (!reduceMotion) {
-      document.body.classList.add("rw-anim");
-
-      [".rw-kpi", ".rw-job", ".rw-cand", ".rw-col-side > .rw-card", ".rw-dash-grid > .rw-card"].forEach((sel) => {
-        document.querySelectorAll(sel).forEach((el, i) => el.style.setProperty("--i", Math.min(i, 8)));
-      });
-
-      document.querySelectorAll(".rw-kpi strong:not(.rw-kpi-name), .rw-stats dd, .rw-job-stats dd").forEach((el) => {
-        const m = el.textContent.trim().match(/^(\d+(?:\.\d+)?)(.*)$/);
-        if (!m) return;
-        const end = parseFloat(m[1]);
-        const suffix = m[2];
-        const decimals = (m[1].split(".")[1] || "").length;
-        const start = performance.now();
-        const step = (now) => {
-          const p = Math.min((now - start) / 900, 1);
-          el.textContent = (end * (1 - Math.pow(1 - p, 3))).toFixed(decimals) + suffix;
-          if (p < 1) requestAnimationFrame(step);
-        };
-        el.textContent = (0).toFixed(decimals) + suffix;
-        requestAnimationFrame(step);
-      });
-
-      const grow = (els, prop, from) => {
-        els.forEach((el) => {
-          const target = el.style.getPropertyValue(prop) || el.style[prop];
-          el.style.setProperty(prop, from);
-          requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty(prop, target)));
-        });
-      };
-      grow(document.querySelectorAll(".score-ring-fill"), "stroke-dasharray", `0 ${RING}`);
-      grow(document.querySelectorAll(".rw-cov-track span"), "width", "0%");
-      grow(document.querySelectorAll(".rw-kpi .gauge"), "--score", "0");
-    }
   </script>
 </body>
 </html>

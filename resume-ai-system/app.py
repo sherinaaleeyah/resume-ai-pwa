@@ -52,13 +52,15 @@ TECH_PATTERNS = [
     # =========================
     # Programming Languages
     # =========================
-    r'\bc\b', r'\bc\+\+\b', r'\bc#\b',
+    # C, C++ and C# are separate languages: "c" must not match inside "c++"/"c#" (or "c&i", "c/o").
+    # \b can't anchor after "+" or "#", so these use explicit lookarounds.
+    r'(?<![\w+#&./])c(?![\w+#&/])', r'(?<![\w+#])c\+\+(?![\w+#])', r'(?<![\w+#])c#(?![\w+#])',
     r'\bpython\b', r'\bjava\b',
     r'\bjavascript\b', r'\btypescript\b',
     r'\bruby\b', r'\bgo\b', r'\brust\b',
     r'\bswift\b', r'\bkotlin\b',
     r'\bphp\b', r'\bperl\b',
-    r'\br\b', r'\bmatlab\b',
+    r'(?<![\w+#&./])r(?![\w+#&/])', r'\bmatlab\b',  # R the language, not "R&D"
     r'\bscala\b', r'\bdart\b',
     r'\bsql\b', r'\bnosql\b',
 
@@ -135,7 +137,7 @@ TECH_PATTERNS = [
     r'\btransformer\b',
     r'\byolo\b',
 
-    r'\btensorsource .venv/bin/activateflow\b',
+    r'\btensorflow\b',
     r'\bpytorch\b',
     r'\bkeras\b',
     r'\bscikit[- ]learn\b',
@@ -891,16 +893,52 @@ def calculate_combined_score(resume_text, job_description, required_skills, keyw
     )
     return score, matched, missing
 
+def skill_in_text(skill, text):
+    """True if `skill` appears in `text` as a whole term, not inside another word.
+
+    "r" and "c" only count as the languages, "java" doesn't match "javascript",
+    and "go" doesn't match "good". Symbols are part of the term, so "c" doesn't
+    match "c++" or "c#". Single letters also skip "r&d" / "c/o" style uses.
+    """
+    skill = skill.strip().lower()
+    if not skill:
+        return False
+    if len(skill) == 1:
+        pattern = r"(?<![\w+#&./])" + re.escape(skill) + r"(?![\w+#&/])"
+    else:
+        pattern = r"(?<![\w+#])" + re.escape(skill) + r"(?![\w+#])"
+    return re.search(pattern, text.lower()) is not None
+
+# all-MiniLM-L6-v2 truncates input at 256 word pieces (~180 words). To read the whole
+# document, embed it in overlapping word windows and average them into one vector.
+CHUNK_WORDS = 150
+CHUNK_OVERLAP = 25
+
+def embed_whole_document(text):
+    words = text.split()
+    if not words:
+        return None
+    step = CHUNK_WORDS - CHUNK_OVERLAP
+    chunks = [" ".join(words[i:i + CHUNK_WORDS]) for i in range(0, max(len(words) - CHUNK_OVERLAP, 1), step)]
+    vectors = _bert_model.encode(chunks, normalize_embeddings=True)
+    mean = vectors.mean(axis=0)
+    norm = float((mean ** 2).sum() ** 0.5)
+    return mean / norm if norm else mean
+
 def calculate_score_components(resume_text, job_description, required_skills, keyword_weight=None):
-    # Keyword match score
-    matched = sorted(skill for skill in required_skills if skill in resume_text)
-    missing = sorted(skill for skill in required_skills if skill not in resume_text)
+    # Keyword match score (whole-term matching)
+    matched = sorted(skill for skill in required_skills if skill_in_text(skill, resume_text))
+    missing = sorted(skill for skill in required_skills if not skill_in_text(skill, resume_text))
     keyword_score = (len(matched) / len(required_skills)) * 100 if required_skills else 0
 
-    # BERT semantic similarity score
+    # BERT semantic similarity over the whole resume and job description
     if _bert_model is not None:
-        embeddings = _bert_model.encode([resume_text, job_description.lower()])
-        semantic_score = float(st_util.cos_sim(embeddings[0], embeddings[1])) * 100
+        resume_vec = embed_whole_document(resume_text)
+        job_vec = embed_whole_document(job_description.lower())
+        if resume_vec is None or job_vec is None:
+            semantic_score = 0.0
+        else:
+            semantic_score = max(float((resume_vec * job_vec).sum()), 0.0) * 100
     else:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity

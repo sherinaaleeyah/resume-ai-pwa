@@ -17,7 +17,7 @@
   <header class="lp-nav">
     <div class="lp-container lp-nav-inner">
       <a href="/" class="lp-brand" aria-label="TalentMatch home">
-        <span class="brand-mark">T</span>
+        <span class="brand-mark" aria-hidden="true"></span>
         TalentMatch
       </a>
 
@@ -45,7 +45,7 @@
           AI-Powered Hiring Intelligence
         </div>
 
-        <h1>Hire smarter.<br>Match every resume<br>in seconds.</h1>
+        <h1>Hire smarter.<br>Match every resume<br><em>in seconds.</em></h1>
 
         <p class="landing-subtext">
           TalentMatch reads job descriptions and resumes the way an expert recruiter would —
@@ -307,6 +307,26 @@
   </main>
 
   <script>
+    // Cursor glow: JS only reports the pointer position; CSS draws the gradient.
+    (function () {
+      if (!window.matchMedia("(pointer: fine) and (prefers-reduced-motion: no-preference)").matches) return;
+      var root = document.documentElement;
+      var x = 0, y = 0, queued = false;
+      window.addEventListener("pointermove", function (e) {
+        x = e.clientX; y = e.clientY;
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(function () {
+          root.style.setProperty("--mx", x + "px");
+          root.style.setProperty("--my", y + "px");
+          document.body.classList.add("has-cursor-glow");
+          queued = false;
+        });
+      }, { passive: true });
+      document.addEventListener("pointerleave", function () { document.body.classList.remove("has-cursor-glow"); });
+      window.addEventListener("blur", function () { document.body.classList.remove("has-cursor-glow"); });
+    })();
+
     // Interactive demo: re-score and re-rank sample candidates as the weighting changes.
     (function () {
       var demo = document.getElementById("lpDemo");

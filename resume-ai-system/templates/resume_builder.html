@@ -16,7 +16,7 @@
 <nav class="navbar app-nav">
   <div class="container-fluid dashboard-shell">
     <div class="nav-left">
-      <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
+      <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
       <span class="nav-mode-pill">Job Seeker</span>
     </div>
     <div class="app-nav-links">
@@ -789,10 +789,6 @@
 
     updatePreview();
 
-    if (!reduceMotion) {
-      document.body.classList.add('rw-anim');
-      document.querySelectorAll('.rb-sec, .rb-submit').forEach((el, i) => el.style.setProperty('--i', Math.min(i, 6)));
-    }
 
     /* Loader on submit */
     const genForm   = document.getElementById('generate-resume-form');

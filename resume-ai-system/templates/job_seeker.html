@@ -16,7 +16,7 @@
   <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
-        <a href="/" class="navbar-brand"><span class="brand-mark">T</span> TalentMatch</a>
+        <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
         <span class="nav-mode-pill">Job Seeker</span>
       </div>
       <div class="app-nav-links">
@@ -212,7 +212,6 @@
     }
 
     (function () {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const jd = document.getElementById("job_description");
       const fileInput = document.getElementById("resume");
       const dropZone = document.getElementById("dropZone");
@@ -307,10 +306,6 @@
       update();
       updateChecklist();
 
-      if (!reduceMotion) {
-        document.body.classList.add("rw-anim");
-        document.querySelectorAll(".js-step, .js-analyze, .js-lower > *").forEach((el, i) => el.style.setProperty("--i", i));
-      }
     })();
   </script>
 
