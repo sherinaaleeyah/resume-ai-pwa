@@ -523,6 +523,11 @@
     }
 
     if (resumeInput && candidateList && candidateModalElement) {
+      // The modal sits inside the sticky side panel, whose stacking context would trap it
+      // under Bootstrap's backdrop (blocking all clicks). Move it to <body>; the name inputs
+      // stay in the upload form via their `form` attribute.
+      document.body.appendChild(candidateModalElement);
+
       resumeInput.addEventListener("change", () => {
         candidateList.innerHTML = "";
 
@@ -538,6 +543,7 @@
           input.id = `candidate-name-${index}`;
           input.type = "text";
           input.name = "candidate_names";
+          input.setAttribute("form", "resume-rank-form");
           input.value = candidateNameFromFile(file.name) || file.name;
           input.required = true;
 

@@ -145,11 +145,22 @@ TECH_PATTERNS = [
     r'\bpandas\b',
     r'\bnumpy\b',
     r'\bopencv\b',
+    r'\bspacy\b',
+    r'\bmatplotlib\b',
+    r'\bjupyter(?: notebooks?)?\b',
     r'\bhugging face\b',
     r'\blangchain\b',
     r'\bopenai\b',
     r'\bchatgpt\b',
+    r'\bgemini(?: api)?\b',
     r'\bllm\b',
+    r'\blogistic regression\b',
+    r'\bdecision trees?\b',
+    r'\bgradient boosting\b',
+    r'\blightgbm\b',
+    r'\bpredictive model(?:s|ing|ling)?\b',
+    r'\bsentiment analysis\b',
+    r'\btwitter api\b',
 
     # =========================
     # Cloud / DevOps
@@ -218,12 +229,16 @@ TECH_PATTERNS = [
     # =========================
     r'\bhadoop\b',
     r'\bspark\b',
+    r'\bpyspark\b',
     r'\bkafka\b',
     r'\bairflow\b',
     r'\betl\b',
     r'\bdata warehouse\b',
     r'\bsnowflake\b',
     r'\bdatabricks\b',
+    r'\baws glue\b',
+    r'\bdata clean(?:ing|sing)\b',
+    r'\bdata wrangl(?:e|es|ing)\b',
 
     # =========================
     # Data Analytics / BI
@@ -232,6 +247,8 @@ TECH_PATTERNS = [
     r'\bpower\s?bi\b',
     r'\bexcel\b',
     r'\bgoogle sheets\b',
+    r'\bdata analysis\b',
+    r'\bdata visuali[sz]ations?\b',
 
     # =========================
     # Testing / QA
@@ -275,6 +292,11 @@ TECH_PATTERNS = [
     r'\binventor\b',
     r'\brevit\b',
     r'\barchicad\b',
+    r'\bprota ?structure\b',
+    r'\bautodesk robot\b',
+    r'\brobot structural analysis\b',
+    r'\bthonny\b',
+   
 
     # =========================
     # Business / Finance / ERP
@@ -296,6 +318,7 @@ TECH_PATTERNS = [
     r'\bspss\b',
     r'\bsas\b',
     r'\brapidminer\b',
+    r'\bstatistical analysis\b',
 
     # =========================
     # Healthcare IT
@@ -851,6 +874,21 @@ def get_ranked_candidates(job_id):
         })
     return candidates
 
+# Products written more than one way. The key is the name shown and matched; any spelling
+# in its list counts as the same skill in both the job description and the resume.
+SKILL_ALIASES = {
+    "protastructure": ["prota structure"],
+    "autodesk robot": ["robot structural analysis"],
+    "decision trees": ["decision tree"],
+    "predictive models": ["predictive model", "predictive modeling", "predictive modelling"],
+    "data cleaning": ["data cleansing"],
+    "data wrangling": ["data wrangle", "data wrangles"],
+    "data visualisation": ["data visualization", "data visualisations", "data visualizations"],
+    "jupyter notebook": ["jupyter", "jupyter notebooks"],
+    "gemini api": ["gemini"],
+}
+CANONICAL_SKILL = {alias: name for name, aliases in SKILL_ALIASES.items() for alias in aliases}
+
 def extract_required_skills(job_description):
     text = job_description.lower()
     found_skills = set()
@@ -858,7 +896,7 @@ def extract_required_skills(job_description):
     # Regex-based detection
     for pattern in TECH_PATTERNS:
         matches = re.findall(pattern, text)
-        found_skills.update(matches)
+        found_skills.update(CANONICAL_SKILL.get(m, m) for m in matches)
 
     # Optional: spaCy NER for extra tech/product mentions
     if nlp:
@@ -903,11 +941,16 @@ def skill_in_text(skill, text):
     skill = skill.strip().lower()
     if not skill:
         return False
-    if len(skill) == 1:
-        pattern = r"(?<![\w+#&./])" + re.escape(skill) + r"(?![\w+#&/])"
-    else:
-        pattern = r"(?<![\w+#])" + re.escape(skill) + r"(?![\w+#])"
-    return re.search(pattern, text.lower()) is not None
+    skill = CANONICAL_SKILL.get(skill, skill)
+    text = text.lower()
+    for term in [skill] + SKILL_ALIASES.get(skill, []):
+        if len(term) == 1:
+            pattern = r"(?<![\w+#&./])" + re.escape(term) + r"(?![\w+#&/])"
+        else:
+            pattern = r"(?<![\w+#])" + re.escape(term) + r"(?![\w+#])"
+        if re.search(pattern, text):
+            return True
+    return False
 
 # all-MiniLM-L6-v2 truncates input at 256 word pieces (~180 words). To read the whole
 # document, embed it in overlapping word windows and average them into one vector.
