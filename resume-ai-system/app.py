@@ -62,6 +62,7 @@ TECH_PATTERNS = [
     r'\bphp\b', r'\bperl\b',
     r'(?<![\w+#&./])r(?![\w+#&/])', r'\bmatlab\b',  # R the language, not "R&D"
     r'\bscala\b', r'\bdart\b',
+    r'\b(?:vb|visual basic) ?\.net\b',
     r'\bsql\b', r'\bnosql\b',
 
     # =========================
@@ -72,6 +73,7 @@ TECH_PATTERNS = [
     r'\bsass\b', r'\bscss\b',
     r'\bbootstrap\b', r'\btailwind\b',
     r'\bmaterial ui\b', r'\bchakra ui\b',
+    r'\bado ?\.net\b', r'\bentity framework\b',
 
     r'\breact\b', r'\breact\.?js\b',
     r'\bnext\.?js\b',
@@ -223,6 +225,7 @@ TECH_PATTERNS = [
     r'\bswitch\b',
     r'\bcisco\b',
     r'\bpacket tracer\b',
+    r'\bactive directory\b',
 
     # =========================
     # Data Engineering / Big Data
@@ -260,6 +263,7 @@ TECH_PATTERNS = [
     r'\bpytest\b',
     r'\bunit testing\b',
     r'\bautomation testing\b',
+    r'\bsoftware testing\b',
 
     # =========================
     # UI/UX & Creative Design
@@ -366,6 +370,9 @@ TECH_PATTERNS = [
     r'\bdata structures\b',
     r'\balgorithms\b',
     r'\bsoftware engineering\b',
+    r'\bvisual studio\b',
+    r'\beclipse\b',
+    r'\bblockchain\b',
     r'\bsdlc\b',
     r'\bagile\b',
     r'\bscrum\b',
@@ -882,6 +889,8 @@ SKILL_ALIASES = {
     "decision trees": ["decision tree"],
     "predictive models": ["predictive model", "predictive modeling", "predictive modelling"],
     "data cleaning": ["data cleansing"],
+    "vb.net": ["vb .net", "visual basic .net", "visual basic.net"],
+    "ado.net": ["ado .net"],
     "data wrangling": ["data wrangle", "data wrangles"],
     "data visualisation": ["data visualization", "data visualisations", "data visualizations"],
     "jupyter notebook": ["jupyter", "jupyter notebooks"],
@@ -901,11 +910,50 @@ def extract_required_skills(job_description):
     # Optional: spaCy NER for extra tech/product mentions
     if nlp:
         doc = nlp(job_description)
+        entities = set()
         for ent in doc.ents:
-            if ent.label_ in ("ORG", "PRODUCT","SKILL"):
-                found_skills.add(ent.text.lower())
+            if ent.label_ not in ("ORG", "PRODUCT", "SKILL"):
+                continue
+            entity = " ".join(ent.text.lower().split()).strip(" .,:;-•")
+            if not entity or is_non_skill_entity(entity):
+                continue
+            # Skip "pytorch familiarity" when "pytorch" was already found, and "python" inside "python"
+            if any(skill_in_text(skill, entity) or skill_in_text(entity, skill) for skill in found_skills):
+                continue
+            entities.add(entity)
+        found_skills.update(remove_duplicates(entities))
 
     return list(found_skills)
+
+# spaCy tags headings, action verbs and degree names as ORG/PRODUCT ("Responsibilities",
+# "Collect", "Bachelor of Computer Science"). Entities containing these are not skills.
+# Only applied to spaCy entities: the TECH_PATTERNS list is curated, so "software
+# engineering" or "statistics" found there stay.
+SECTION_HEADINGS = [
+    "responsibilities", "requirements", "qualifications",
+    "experience", "education", "skills", "summary",
+    "about", "profile", "objective", "certifications",
+    "collect", "develop", "monitor", "build", "create",
+    "collaborate", "perform", "manage", "maintain",
+]
+EDUCATION_TERMS = [
+    "bachelor", "master", "degree", "diploma",
+    "computer science", "statistics", "engineering",
+    "information technology",
+]
+NON_SKILL_PATTERN = re.compile(
+    r"\b(?:" + "|".join(re.escape(t) for t in SECTION_HEADINGS + EDUCATION_TERMS) + r")\w*"
+)
+
+def is_non_skill_entity(text):
+    # Whole words, allowing endings: "developing", "bachelor's", "masters" all count
+    return NON_SKILL_PATTERN.search(text.lower()) is not None
+
+def remove_duplicates(skills):
+    """Drop a skill that contains another one as a whole term ("pytorch familiarity" when "pytorch" exists)."""
+    skills = set(skills)
+    return [skill for skill in skills
+            if not any(other != skill and skill_in_text(other, skill) for other in skills)]
 
 def parse_pdf(file):
     text = ""
