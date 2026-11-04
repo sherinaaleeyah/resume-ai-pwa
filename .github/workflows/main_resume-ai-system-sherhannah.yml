@@ -13,6 +13,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: resume-ai-system
     permissions:
       contents: read #This is required for actions/checkout
 
@@ -38,8 +41,8 @@ jobs:
         with:
           name: python-app
           path: |
-            .
-            !antenv/
+            resume-ai-system
+            !resume-ai-system/antenv/
 
       # 🚫 Opting Out of Oryx Build
       # If you prefer to disable the Oryx build process during deployment, follow these steps:
