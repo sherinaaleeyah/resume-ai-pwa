@@ -21,7 +21,17 @@
         <a href="{{ url_for('recruiter') }}" {% if not selected_job %}aria-current="page"{% endif %}>Dashboard</a>
         <a href="{{ url_for('recruiter') }}#job-form">New job</a>
       </div>
-      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+      <div class="nav-user">
+        <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+        <div class="nav-user-info">
+          <span class="nav-user-name">{{ current_user.full_name }}</span>
+          <span class="nav-user-company">{{ current_user.company_name }}</span>
+        </div>
+        <form action="{{ url_for('auth.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="nav-logout"><i class="fa-solid fa-right-from-bracket"></i> <span>Sign out</span></button>
+        </form>
+      </div>
     </div>
   </nav>
 
@@ -129,7 +139,11 @@
                         <span class="rw-status rw-status-{{ _tone }}">{{ candidate.strength }}</span>
                       </div>
                       <p class="rw-cand-meta">
+                        {% if candidate.has_file %}
+                        <a class="resume-link" href="{{ url_for('download_resume', job_id=selected_job['id'], candidate_id=candidate['id']) }}" target="_blank" rel="noopener"><i class="fa-regular fa-file-lines"></i> {{ candidate.file_name }}</a>
+                        {% else %}
                         <span><i class="fa-regular fa-file-lines"></i> {{ candidate.file_name }}</span>
+                        {% endif %}
                         <span class="rw-ok"><i class="fa-solid fa-check"></i> {{ candidate.matched|length }} matched</span>
                         <span class="rw-miss"><i class="fa-solid fa-xmark"></i> {{ candidate.missing|length }} missing</span>
                       </p>
@@ -182,6 +196,7 @@
                     <div class="card-footer-actions">
                       <form action="{{ url_for('delete_candidate', job_id=selected_job['id'], candidate_id=candidate['id']) }}" method="post"
                             onsubmit="return confirm('Remove {{ candidate.candidate_name|e }} from this ranking?');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button class="btn btn-outline-danger btn-sm" type="submit">
                           <i class="fa-solid fa-trash"></i> 
                         </button>
@@ -210,6 +225,7 @@
             <i class="fa-solid fa-chevron-down rw-chevron" aria-hidden="true"></i>
           </summary>
           <form id="edit-job-form" action="{{ url_for('edit_job', job_id=selected_job.id) }}" method="post" class="upload-form rw-collapsible-body">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-row">
               <div class="form-group">
                 <label for="edit-title">Job title</label>
@@ -239,6 +255,7 @@
             <h2><i class="fa-solid fa-cloud-arrow-up"></i> Add resumes</h2>
           </div>
           <form id="resume-rank-form" action="{{ url_for('rank_job_resumes', job_id=selected_job.id) }}" method="post" enctype="multipart/form-data" class="upload-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group file-zone" id="dropZone">
               <span class="rw-drop-icon" aria-hidden="true"><i class="fa-solid fa-file-arrow-up"></i></span>
               <span class="rw-drop-title">Drag &amp; drop resumes here</span>
@@ -278,6 +295,7 @@
         <section class="rw-card">
           {% set kw_pct = (selected_job.keyword_weight * 100) | round | int %}
           <form id="weight-form" action="{{ url_for('update_job_weights', job_id=selected_job.id) }}" method="post" class="weight-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="weight-form-header">
               <label for="keyword-weight"><i class="fa-solid fa-sliders"></i> Scoring weight</label>
               <button type="button" id="weight-reset" class="rw-link-btn">Reset</button>
@@ -418,6 +436,7 @@
                 </a>
                 <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post"
                       onsubmit="return confirm('Delete the {{ job.title|e }} posting and its candidates?');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-outline-danger btn-sm" type="submit" aria-label="Delete {{ job.title }} job posting">
                     <i class="fa-solid fa-trash"></i>
                   </button>
@@ -444,6 +463,7 @@
           </div>
         </div>
         <form action="{{ url_for('recruiter') }}" method="post" class="upload-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="form-row">
             <div class="form-group">
               <label for="title">Job title</label>
@@ -451,7 +471,7 @@
             </div>
             <div class="form-group">
               <label for="company">Company</label>
-              <input id="company" type="text" name="company" placeholder="Acme Analytics" required>
+              <input id="company" type="text" name="company" value="{{ current_user.company_name }}" placeholder="Acme Analytics" required>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 from flask import Flask, abort, redirect, request, render_template, send_from_directory, url_for, send_file
+from flask_login import current_user, login_required
 from io import BytesIO
 import pdfplumber
 import docx
@@ -12,10 +13,8 @@ try:
     _bert_model = SentenceTransformer('all-MiniLM-L6-v2')
 except Exception:
     _bert_model = None
-import glob
 import json
 import os
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 import google.generativeai as genai
@@ -23,6 +22,11 @@ from dotenv import load_dotenv
 import time
 from google.api_core import exceptions
 from werkzeug.utils import secure_filename
+
+import auth
+from auth import csrf
+import db
+from db import DEFAULT_KEYWORD_WEIGHT, get_db
 
 load_dotenv()
 
@@ -32,9 +36,18 @@ model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE = os.path.join(BASE_DIR, "hiring_dashboard.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Recruiter login, CSRF protection and secure cookies (see auth.py).
+auth.init_app(app)
+
+# Largest single request (all files in one upload together). Each resume is also capped
+# individually at MAX_RESUME_BYTES below.
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+MAX_RESUME_BYTES = 5 * 1024 * 1024
+RESUME_CONTENT_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 # Load spaCy model only if available
@@ -381,131 +394,6 @@ TECH_PATTERNS = [
 ]
 
 
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def extract_resume_text(file_or_path, filename=None):
-    name = (filename or str(file_or_path)).lower()
-    if name.endswith(".pdf"):
-        return parse_pdf(file_or_path)
-    if name.endswith(".docx"):
-        return parse_docx(file_or_path)
-    return ""
-
-def find_uploaded_resume(original_filename, created_at):
-    # Saved uploads are named "<stem>_<utc timestamp><suffix>" (see save_uploaded_resume).
-    # Pick the earliest one for this file saved at or after the candidate row's timestamp.
-    stem = Path(original_filename).stem
-    suffix = Path(original_filename).suffix.lower()
-    try:
-        row_time = datetime.fromisoformat(created_at)
-    except ValueError:
-        return None
-
-    best = None
-    for path in Path(UPLOAD_DIR).glob(f"{glob.escape(stem)}_*{suffix}"):
-        try:
-            saved_time = datetime.strptime(path.stem[len(stem) + 1:], "%Y%m%d%H%M%S%f")
-        except ValueError:
-            continue
-        # Uploads are saved while the batch is processed, so allow up to 10 minutes after the row time
-        delta = (saved_time.replace(microsecond=0) - row_time).total_seconds()
-        if 0 <= delta <= 600 and (best is None or saved_time < best[0]):
-            best = (saved_time, path)
-    return str(best[1]) if best else None
-
-# Share of the combined score that comes from keyword matching; the rest is semantic similarity.
-DEFAULT_KEYWORD_WEIGHT = 0.6
-
-def init_db():
-    with get_db_connection() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                company TEXT NOT NULL,
-                description TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
-        columns = [row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()]
-        if "active" not in columns:
-            conn.execute("ALTER TABLE jobs ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
-        if "keyword_weight" not in columns:
-            conn.execute(f"ALTER TABLE jobs ADD COLUMN keyword_weight REAL NOT NULL DEFAULT {DEFAULT_KEYWORD_WEIGHT}")
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS candidate_scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_id INTEGER NOT NULL,
-                candidate_name TEXT NOT NULL,
-                file_name TEXT NOT NULL,
-                score REAL NOT NULL,
-                matched_skills TEXT NOT NULL,
-                missing_skills TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (job_id) REFERENCES jobs (id)
-            )
-            """
-        )
-        score_columns = [row["name"] for row in conn.execute("PRAGMA table_info(candidate_scores)").fetchall()]
-        if "summary" not in score_columns:
-            conn.execute("ALTER TABLE candidate_scores ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
-        if "keyword_score" not in score_columns:
-            conn.execute("ALTER TABLE candidate_scores ADD COLUMN keyword_score REAL")
-        if "semantic_score" not in score_columns:
-            conn.execute("ALTER TABLE candidate_scores ADD COLUMN semantic_score REAL")
-        if "resume_text" not in score_columns:
-            conn.execute("ALTER TABLE candidate_scores ADD COLUMN resume_text TEXT")
-
-        # Backfill resume text for rows saved before it was stored, from the uploads folder
-        missing_text_rows = conn.execute(
-            "SELECT id, file_name, created_at FROM candidate_scores WHERE resume_text IS NULL"
-        ).fetchall()
-        for row in missing_text_rows:
-            path = find_uploaded_resume(row["file_name"], row["created_at"])
-            if path:
-                try:
-                    conn.execute(
-                        "UPDATE candidate_scores SET resume_text = ? WHERE id = ?",
-                        (extract_resume_text(path), row["id"]),
-                    )
-                except Exception as e:
-                    print(f"Could not read {path}: {e}")
-
-        # Backfill component scores for rows saved before they were stored,
-        # assuming those rows were scored with the default 60/40 weighting.
-        legacy_rows = conn.execute(
-            "SELECT id, score, matched_skills, missing_skills FROM candidate_scores WHERE keyword_score IS NULL"
-        ).fetchall()
-        for row in legacy_rows:
-            matched = json.loads(row["matched_skills"] or "[]")
-            missing = json.loads(row["missing_skills"] or "[]")
-            total = len(matched) + len(missing)
-            keyword_score = (len(matched) / total) * 100 if total else 0
-            semantic_score = (row["score"] - DEFAULT_KEYWORD_WEIGHT * keyword_score) / (1 - DEFAULT_KEYWORD_WEIGHT)
-            semantic_score = max(0.0, min(100.0, semantic_score))
-            conn.execute(
-                "UPDATE candidate_scores SET keyword_score = ?, semantic_score = ? WHERE id = ?",
-                (keyword_score, semantic_score, row["id"]),
-            )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS activity (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_id INTEGER,
-                message TEXT NOT NULL,
-                score REAL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (job_id) REFERENCES jobs (id)
-            )
-            """
-        )
-
 def candidate_name_from_filename(filename):
     stem = Path(filename).stem
     cleaned = re.sub(r"[_-]+", " ", stem)
@@ -513,16 +401,31 @@ def candidate_name_from_filename(filename):
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned.title() if cleaned else filename
 
-def save_uploaded_resume(file):
-    original_filename = secure_filename(file.filename) or "resume"
-    stem = Path(original_filename).stem or "resume"
-    suffix = Path(original_filename).suffix.lower()
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
-    saved_filename = f"{stem}_{timestamp}{suffix}"
-    file.stream.seek(0)
-    file.save(os.path.join(UPLOAD_DIR, saved_filename))
-    file.stream.seek(0)
-    return original_filename, saved_filename
+def read_uploaded_resume(file):
+    """Validate one uploaded resume and return (filename, bytes, error).
+
+    `error` is None when the file is usable, otherwise a short reason it was skipped.
+    The file is kept in memory and stored in the database (resume_files table); nothing is
+    written to disk.
+    """
+    raw_name = file.filename or ""
+    extension = Path(raw_name).suffix.lower()
+    stem = Path(secure_filename(Path(raw_name).stem)).stem or "resume"
+    filename = f"{stem}{extension}"
+
+    if extension not in RESUME_CONTENT_TYPES:
+        return filename, None, "only PDF and DOCX files are supported"
+
+    data = file.stream.read(MAX_RESUME_BYTES + 1)
+    if len(data) > MAX_RESUME_BYTES:
+        return filename, None, "larger than the 5 MB limit"
+    if not data:
+        return filename, None, "the file is empty"
+    # PDF files start with "%PDF"; DOCX files are ZIP archives and start with "PK".
+    expected_start = b"%PDF" if extension == ".pdf" else b"PK"
+    if not data.startswith(expected_start):
+        return filename, None, f"it does not look like a real {extension[1:].upper()} file"
+    return filename, data, None
 
 def match_strength(score):
     if score >= 85:
@@ -724,7 +627,9 @@ def format_activity_date(value):
         return value
 
 def build_recruiter_overview():
-    with get_db_connection() as conn:
+    """Dashboard data for the signed-in recruiter only."""
+    params = {"uid": current_user.id}
+    with get_db() as conn:
         jobs = conn.execute(
             """
             SELECT
@@ -738,29 +643,51 @@ def build_recruiter_overview():
                 AVG(cs.score) AS average_score
             FROM jobs j
             LEFT JOIN candidate_scores cs ON cs.job_id = j.id
-            WHERE j.active = 1
+            WHERE j.active = 1 AND j.user_id = :uid
             GROUP BY j.id
             ORDER BY j.id DESC
-            """
+            """,
+            params,
         ).fetchall()
-        total_candidates = conn.execute("SELECT COUNT(*) AS total FROM candidate_scores").fetchone()["total"]
-        average_match = conn.execute("SELECT AVG(score) AS average FROM candidate_scores").fetchone()["average"]
+        total_candidates = conn.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM candidate_scores cs
+            JOIN jobs j ON j.id = cs.job_id
+            WHERE j.user_id = :uid
+            """,
+            params,
+        ).fetchone()["total"]
+        average_match = conn.execute(
+            """
+            SELECT AVG(cs.score) AS average
+            FROM candidate_scores cs
+            JOIN jobs j ON j.id = cs.job_id
+            WHERE j.user_id = :uid
+            """,
+            params,
+        ).fetchone()["average"]
         top_candidate = conn.execute(
             """
             SELECT cs.candidate_name, cs.score, j.title
             FROM candidate_scores cs
             JOIN jobs j ON j.id = cs.job_id
+            WHERE j.user_id = :uid
             ORDER BY cs.score DESC, cs.id DESC
             LIMIT 1
-            """
+            """,
+            params,
         ).fetchone()
         activities = conn.execute(
             """
-            SELECT message, score, created_at
-            FROM activity
-            ORDER BY id DESC
+            SELECT a.message, a.score, a.created_at
+            FROM activity a
+            JOIN jobs j ON j.id = a.job_id
+            WHERE j.user_id = :uid
+            ORDER BY a.id DESC
             LIMIT 8
-            """
+            """,
+            params,
         ).fetchall()
 
     job_cards = []
@@ -806,8 +733,10 @@ def build_recruiter_overview():
         ],
     }, job_cards
 
+# NOTE: get_job_metrics and get_ranked_candidates do not check who owns the job. Always call
+# get_owned_job() first (the routes below do), which returns 404 for another recruiter's job.
 def get_job_metrics(job_id):
-    with get_db_connection() as conn:
+    with get_db() as conn:
         metrics = conn.execute(
             """
             SELECT
@@ -815,9 +744,9 @@ def get_job_metrics(job_id):
                 MAX(score) AS top_score,
                 AVG(score) AS average_score
             FROM candidate_scores
-            WHERE job_id = ?
+            WHERE job_id = :job_id
             """,
-            (job_id,),
+            {"job_id": job_id},
         ).fetchone()
 
     return {
@@ -827,35 +756,35 @@ def get_job_metrics(job_id):
     }
 
 def get_ranked_candidates(job_id):
-    with get_db_connection() as conn:
+    with get_db() as conn:
         # 1. Fetch Job Details first so the AI has context
         job = conn.execute(
-            "SELECT title, description FROM jobs WHERE id = ?", 
-            (job_id,)
+            "SELECT title, description FROM jobs WHERE id = :job_id",
+            {"job_id": job_id},
         ).fetchone()
-        
+
         # Fallback if job is missing
         job_title = job["title"] if job else "Unknown Position"
         job_desc = job["description"] if job else ""
 
-        # 2. Fetch Candidate Scores
+        # 2. Fetch Candidate Scores (has_file says whether a resume file is stored for the row)
         rows = conn.execute(
             """
-            SELECT id, candidate_name, file_name, score, matched_skills, missing_skills, summary,
-                   keyword_score, semantic_score
-            FROM candidate_scores
-            WHERE job_id = ?
-            ORDER BY score DESC, id DESC
+            SELECT cs.id, cs.candidate_name, cs.file_name, cs.score, cs.matched_skills,
+                   cs.missing_skills, cs.summary, cs.keyword_score, cs.semantic_score,
+                   EXISTS (SELECT 1 FROM resume_files rf WHERE rf.candidate_id = cs.id) AS has_file
+            FROM candidate_scores cs
+            WHERE cs.job_id = :job_id
+            ORDER BY cs.score DESC, cs.id DESC
             """,
-            (job_id,),
+            {"job_id": job_id},
         ).fetchall()
 
     candidates = []
     for row in rows:
         matched = json.loads(row["matched_skills"] or "[]")
         missing = json.loads(row["missing_skills"] or "[]")
-        
-        # 3. Update the function call to include all 5 arguments
+
         summary = row["summary"]
         if not summary:
             summary = generate_ai_summary(
@@ -870,6 +799,7 @@ def get_ranked_candidates(job_id):
             "id": row["id"],
             "candidate_name": row["candidate_name"],
             "file_name": row["file_name"],
+            "has_file": bool(row["has_file"]),
             "score": round(row["score"]),
             "matched": matched,
             "missing": missing,
@@ -1042,11 +972,6 @@ def calculate_score_components(resume_text, job_description, required_skills, ke
 
     return combined_score, matched, missing, keyword_score, float(semantic_score)
 
-def safe_json_loads(value):
-    try:
-        return json.loads(value) if value else []
-    except json.JSONDecodeError:
-        return []
 
 
 def format_list(items, key):
@@ -1058,183 +983,46 @@ def format_list(items, key):
     return values
 
 
-def build_resume_text_from_builder(resume_data):
-    resume_parts = []
-
-    resume_parts.append(resume_data.get("summary", ""))
-
-    for skill in resume_data.get("skills", []):
-        resume_parts.append(skill)
-
-    for exp in resume_data.get("experiences", []):
-        resume_parts.append(exp.get("role", ""))
-        resume_parts.append(exp.get("company", ""))
-        resume_parts.append(exp.get("description", ""))
-
-    for edu in resume_data.get("educations", []):
-        resume_parts.append(edu.get("school", ""))
-        resume_parts.append(edu.get("degree", ""))
-
-    for project in resume_data.get("projects", []):
-        resume_parts.append(project.get("title", ""))
-        resume_parts.append(project.get("description", ""))
-        resume_parts.append(project.get("tools", ""))
-
-    for cert in resume_data.get("certifications", []):
-        resume_parts.append(cert.get("name", ""))
-        resume_parts.append(cert.get("provider", ""))
-
-    return " ".join(resume_parts).lower()
 
 
-def generate_ai_bullet_points(experience):
-    prompt = f"""
-    You are an AI resume writing assistant.
 
-    Convert the following work experience into 3 professional resume bullet points.
 
-    Company: {experience.get("company")}
-    Role: {experience.get("role")}
-    Period: {experience.get("period")}
-    What the candidate did:
-    {experience.get("description")}
 
-    Requirements:
-    1. Use strong action verbs.
-    2. Make the bullets suitable for an ATS-friendly resume.
-    3. Do not invent fake achievements or numbers.
-    4. Keep each bullet concise.
-    """
 
+
+def check_database_on_startup():
+    """Local SQLite gets its tables automatically. PostgreSQL (Neon) must be set up once with
+    `python setup_db.py`; if that was forgotten, say so clearly in the log instead of failing
+    later with a confusing 'relation does not exist' error."""
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        if db.is_sqlite():
+            db.init_schema()
+        elif not db.schema_ready():
+            print("WARNING: the database has no TalentMatch tables yet. Run:  python setup_db.py")
     except Exception as e:
-        print(f"AI bullet generation error: {e}")
-        return experience.get("description", "")
+        print(f"WARNING: could not check the database ({e}). Is DATABASE_URL correct?")
 
-
-def generate_ai_resume_summary(resume_data):
-    prompt = f"""
-    You are an AI resume writing assistant.
-
-    Candidate Information:
-    Name: {resume_data.get("full_name")}
-    Target Role: {resume_data.get("target_role")}
-    Current Summary: {resume_data.get("summary")}
-    Skills: {", ".join(resume_data.get("skills", []))}
-    Experience: {resume_data.get("experience_text")}
-    Education: {resume_data.get("education_text")}
-    Projects: {resume_data.get("project_text")}
-    Certifications: {resume_data.get("certification_text")}
-
-    Task:
-    Rewrite the professional summary into an ATS-friendly resume summary.
-
-    Requirements:
-    1. Keep it around 2-3 sentences.
-    2. Use professional language.
-    3. Highlight relevant skills, education, projects, or experience.
-    4. Do not invent fake experience, fake skills, or fake certifications.
-    5. Make it suitable for the target role.
-    """
-
-    try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        print(f"AI resume summary error: {e}")
-        return resume_data.get("summary", "")
-
-
-def generate_builder_ai_feedback(score, matched, missing, ats_feedback, target_role):
-    missing_sections = [
-        item["section"] for item in ats_feedback if item["status"] == "Missing"
-    ]
-
-    prompt = f"""
-    You are an AI resume advisor.
-
-    Target Role: {target_role}
-    Resume Score: {score}%
-
-    Matched Skills:
-    {", ".join(matched) if matched else "No strong matched skills detected."}
-
-    Missing Skills:
-    {", ".join(missing) if missing else "No major missing skills detected."}
-
-    Missing ATS Sections:
-    {", ".join(missing_sections) if missing_sections else "No major missing sections detected."}
-
-    Task:
-    Give a clear explanation of the resume score and suggest what the job seeker should improve.
-
-    Requirements:
-    1. Explain what the score means.
-    2. Mention strengths.
-    3. Mention missing skills or skill gaps.
-    4. Mention ATS structure issues if any.
-    5. Give practical improvement suggestions.
-    6. Use a helpful and honest tone.
-    7. Write in 2 short paragraphs.
-    """
-
-    try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        print(f"AI builder feedback error: {e}")
-        return "AI feedback is currently unavailable. Please review the score, matched skills, missing skills, and ATS structure feedback."
-
-init_db()
+check_database_on_startup()
 
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
 
-@app.route("/rank", methods=["POST"])
-def rank_resumes():
-    job_description = request.form.get("job_description", "")
-    required_skills = extract_required_skills(job_description)
-    submitted_names = [
-        name.strip()
-        for field_name in ("candidate_names", "candidate_name", "name", "full_name")
-        for name in request.form.getlist(field_name)
-        if name.strip()
-    ]
 
-    results = []
-    for file in request.files.getlist("resumes"):
-        submitted_filename = file.filename.lower()
-        if not (submitted_filename.endswith(".pdf") or submitted_filename.endswith(".docx")):
-            continue
-
-        original_filename, saved_filename = save_uploaded_resume(file)
-        if original_filename.lower().endswith(".pdf"):
-            text = parse_pdf(file)
-        elif original_filename.lower().endswith(".docx"):
-            text = parse_docx(file)
-
-        submitted_name = submitted_names.pop(0) if submitted_names else ""
-        candidate_name = submitted_name or candidate_name_from_filename(original_filename)
-
-        score, matched, missing = calculate_combined_score(text, job_description, required_skills)
-        results.append({
-            "candidate": candidate_name,
-            "file_name": original_filename,
-            "file_url": url_for("uploaded_file", filename=saved_filename),
-            "score": score,
-            "matched": matched,
-            "missing": missing,
-            "shortlisted": score >= 70,
-        })
-
-    results.sort(key=lambda x: x["score"], reverse=True)
-    return render_template("result.html", results=results, required_skills=sorted(required_skills))
+def get_owned_job(conn, job_id):
+    """The job, but only if it belongs to the signed-in recruiter and has not been archived.
+    Anyone else's job (or a missing one) gives the same 404, so job IDs can't be probed."""
+    job = conn.execute(
+        "SELECT * FROM jobs WHERE id = :job_id AND user_id = :uid AND active = 1",
+        {"job_id": job_id, "uid": current_user.id},
+    ).fetchone()
+    if job is None:
+        abort(404)
+    return job
 
 
 @app.route("/recruiter", methods=["GET", "POST"])
+@login_required
 def recruiter():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -1242,23 +1030,25 @@ def recruiter():
         description = request.form.get("description", "").strip()
 
         if title and company and description:
-            with get_db_connection() as conn:
-                cursor = conn.execute(
+            timestamp = datetime.utcnow().isoformat(timespec="seconds")
+            with get_db() as conn:
+                job_id = conn.execute(
                     """
-                    INSERT INTO jobs (title, company, description, created_at, active)
-                    VALUES (?, ?, ?, ?, 1)
+                    INSERT INTO jobs (user_id, title, company, description, created_at, active)
+                    VALUES (:uid, :title, :company, :description, :created_at, 1)
+                    RETURNING id
                     """,
-                    (title, company, description, datetime.utcnow().isoformat(timespec="seconds")),
-                )
-                job_id = cursor.lastrowid
+                    {
+                        "uid": current_user.id,
+                        "title": title,
+                        "company": company,
+                        "description": description,
+                        "created_at": timestamp,
+                    },
+                ).scalar()
                 conn.execute(
-                    "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-                    (
-                        job_id,
-                        f"{title} opened at {company}",
-                        None,
-                        datetime.utcnow().isoformat(timespec="seconds"),
-                    ),
+                    "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, NULL, :created_at)",
+                    {"job_id": job_id, "message": f"{title} opened at {company}", "created_at": timestamp},
                 )
             return redirect(url_for("job_detail", job_id=job_id))
 
@@ -1267,12 +1057,10 @@ def recruiter():
     return render_template("recruiter.html", jobs=jobs, kpis=kpis)
 
 @app.route("/recruiter/jobs/<int:job_id>")
+@login_required
 def job_detail(job_id):
-    with get_db_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ? AND active = 1", (job_id,)).fetchone()
-
-    if job is None:
-        abort(404)
+    with get_db() as conn:
+        job = get_owned_job(conn, job_id)
 
     required_skills = sorted(extract_required_skills(job["description"]))
     return render_template(
@@ -1285,6 +1073,7 @@ def job_detail(job_id):
     )
 
 @app.route("/recruiter/jobs/<int:job_id>/edit", methods=["POST"])
+@login_required
 def edit_job(job_id):
     title = request.form.get("title", "").strip()
     company = request.form.get("company", "").strip()
@@ -1293,15 +1082,13 @@ def edit_job(job_id):
     if not title or not company or not description:
         return redirect(url_for("job_detail", job_id=job_id))
 
-    with get_db_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ? AND active = 1", (job_id,)).fetchone()
-        if job is None:
-            abort(404)
+    with get_db() as conn:
+        job = get_owned_job(conn, job_id)
 
         timestamp = datetime.utcnow().isoformat(timespec="seconds")
         conn.execute(
-            "UPDATE jobs SET title = ?, company = ?, description = ? WHERE id = ?",
-            (title, company, description, job_id),
+            "UPDATE jobs SET title = :title, company = :company, description = :description WHERE id = :job_id",
+            {"title": title, "company": company, "description": description, "job_id": job_id},
         )
 
         message = f"{title} job description updated"
@@ -1312,8 +1099,8 @@ def edit_job(job_id):
                 message += f" ({skipped} without a stored resume kept their old score)"
 
         conn.execute(
-            "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-            (job_id, message, None, timestamp),
+            "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, NULL, :created_at)",
+            {"job_id": job_id, "message": message, "created_at": timestamp},
         )
 
     return redirect(url_for("job_detail", job_id=job_id))
@@ -1321,8 +1108,8 @@ def edit_job(job_id):
 def rescore_job_candidates(conn, job_id, job_title, job_description, keyword_weight):
     required_skills = extract_required_skills(job_description)
     rows = conn.execute(
-        "SELECT id, candidate_name, resume_text FROM candidate_scores WHERE job_id = ?",
-        (job_id,),
+        "SELECT id, candidate_name, resume_text FROM candidate_scores WHERE job_id = :job_id",
+        {"job_id": job_id},
     ).fetchall()
 
     rescored = skipped = 0
@@ -1344,16 +1131,25 @@ def rescore_job_candidates(conn, job_id, job_title, job_description, keyword_wei
         conn.execute(
             """
             UPDATE candidate_scores
-            SET score = ?, keyword_score = ?, semantic_score = ?,
-                matched_skills = ?, missing_skills = ?, summary = ?
-            WHERE id = ?
+            SET score = :score, keyword_score = :keyword_score, semantic_score = :semantic_score,
+                matched_skills = :matched, missing_skills = :missing, summary = :summary
+            WHERE id = :id
             """,
-            (score, keyword_score, semantic_score, json.dumps(matched), json.dumps(missing), summary, row["id"]),
+            {
+                "score": score,
+                "keyword_score": keyword_score,
+                "semantic_score": semantic_score,
+                "matched": json.dumps(matched),
+                "missing": json.dumps(missing),
+                "summary": summary,
+                "id": row["id"],
+            },
         )
         rescored += 1
     return rescored, skipped
 
 @app.route("/recruiter/jobs/<int:job_id>/weights", methods=["POST"])
+@login_required
 def update_job_weights(job_id):
     try:
         keyword_percent = int(request.form.get("keyword_weight", ""))
@@ -1361,115 +1157,154 @@ def update_job_weights(job_id):
         return redirect(url_for("job_detail", job_id=job_id))
     keyword_weight = max(0, min(100, keyword_percent)) / 100
 
-    with get_db_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ? AND active = 1", (job_id,)).fetchone()
-        if job is None:
-            abort(404)
+    with get_db() as conn:
+        job = get_owned_job(conn, job_id)
 
-        conn.execute("UPDATE jobs SET keyword_weight = ? WHERE id = ?", (keyword_weight, job_id))
+        conn.execute(
+            "UPDATE jobs SET keyword_weight = :weight WHERE id = :job_id",
+            {"weight": keyword_weight, "job_id": job_id},
+        )
 
         # Re-rank existing candidates from their stored component scores
         rows = conn.execute(
-            "SELECT id, keyword_score, semantic_score FROM candidate_scores WHERE job_id = ?",
-            (job_id,),
+            "SELECT id, keyword_score, semantic_score FROM candidate_scores WHERE job_id = :job_id",
+            {"job_id": job_id},
         ).fetchall()
         for row in rows:
             conn.execute(
-                "UPDATE candidate_scores SET score = ? WHERE id = ?",
-                (combine_scores(row["keyword_score"], row["semantic_score"], keyword_weight), row["id"]),
+                "UPDATE candidate_scores SET score = :score WHERE id = :id",
+                {"score": combine_scores(row["keyword_score"], row["semantic_score"], keyword_weight), "id": row["id"]},
             )
 
         timestamp = datetime.utcnow().isoformat(timespec="seconds")
         conn.execute(
-            "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-            (
-                job_id,
-                f"{job['title']} scoring set to {keyword_percent}% keyword / {100 - keyword_percent}% semantic",
-                None,
-                timestamp,
-            ),
+            "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, NULL, :created_at)",
+            {
+                "job_id": job_id,
+                "message": f"{job['title']} scoring set to {keyword_percent}% keyword / {100 - keyword_percent}% semantic",
+                "created_at": timestamp,
+            },
         )
 
     return redirect(url_for("job_detail", job_id=job_id))
 
 @app.route("/recruiter/jobs/<int:job_id>/delete", methods=["POST"])
+@login_required
 def delete_job(job_id):
-    with get_db_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ? AND active = 1", (job_id,)).fetchone()
-        if job is None:
-            abort(404)
+    with get_db() as conn:
+        job = get_owned_job(conn, job_id)
 
         timestamp = datetime.utcnow().isoformat(timespec="seconds")
-        conn.execute("DELETE FROM candidate_scores WHERE job_id = ?", (job_id,))
-        conn.execute("UPDATE jobs SET active = 0 WHERE id = ?", (job_id,))
+        # Stored resume files first (they reference the candidate rows), then the candidates.
         conn.execute(
-            "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-            (job_id, f"{job['title']} archived and candidate data cleared", None, timestamp),
+            "DELETE FROM resume_files WHERE candidate_id IN (SELECT id FROM candidate_scores WHERE job_id = :job_id)",
+            {"job_id": job_id},
+        )
+        conn.execute("DELETE FROM candidate_scores WHERE job_id = :job_id", {"job_id": job_id})
+        conn.execute("UPDATE jobs SET active = 0 WHERE id = :job_id", {"job_id": job_id})
+        conn.execute(
+            "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, NULL, :created_at)",
+            {"job_id": job_id, "message": f"{job['title']} archived and candidate data cleared", "created_at": timestamp},
         )
 
     return redirect(url_for("recruiter"))
 
 @app.route("/recruiter/jobs/<int:job_id>/candidate/<int:candidate_id>/delete", methods=["POST"])
+@login_required
 def delete_candidate(job_id, candidate_id):
-    with get_db_connection() as conn:
+    with get_db() as conn:
         candidate = conn.execute(
             """
             SELECT cs.candidate_name, cs.score, j.title
             FROM candidate_scores cs
             JOIN jobs j ON j.id = cs.job_id
-            WHERE cs.job_id = ? AND cs.id = ? AND j.active = 1
+            WHERE cs.job_id = :job_id AND cs.id = :candidate_id AND j.user_id = :uid AND j.active = 1
             """,
-            (job_id, candidate_id),
+            {"job_id": job_id, "candidate_id": candidate_id, "uid": current_user.id},
         ).fetchone()
 
         if candidate is None:
             abort(404)
 
-        conn.execute("DELETE FROM candidate_scores WHERE job_id = ? AND id = ?", (job_id, candidate_id))
+        conn.execute("DELETE FROM resume_files WHERE candidate_id = :candidate_id", {"candidate_id": candidate_id})
+        conn.execute(
+            "DELETE FROM candidate_scores WHERE job_id = :job_id AND id = :candidate_id",
+            {"job_id": job_id, "candidate_id": candidate_id},
+        )
 
         timestamp = datetime.utcnow().isoformat(timespec="seconds")
         conn.execute(
-            "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-            (
-                job_id,
-                f"{candidate['candidate_name']} removed from {candidate['title']}",
-                candidate["score"],
-                timestamp,
-            ),
+            "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, :score, :created_at)",
+            {
+                "job_id": job_id,
+                "message": f"{candidate['candidate_name']} removed from {candidate['title']}",
+                "score": candidate["score"],
+                "created_at": timestamp,
+            },
         )
 
     return redirect(url_for("job_detail", job_id=job_id))
 
-@app.route("/recruiter/jobs/<int:job_id>/rank", methods=["POST"])
-def rank_job_resumes(job_id):
-    with get_db_connection() as conn:
-        job = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+@app.route("/recruiter/jobs/<int:job_id>/candidate/<int:candidate_id>/resume")
+@login_required
+def download_resume(job_id, candidate_id):
+    """Serve a stored resume file, but only to the recruiter who owns the job."""
+    with get_db() as conn:
+        row = conn.execute(
+            """
+            SELECT rf.filename, rf.content_type, rf.data
+            FROM resume_files rf
+            JOIN candidate_scores cs ON cs.id = rf.candidate_id
+            JOIN jobs j ON j.id = cs.job_id
+            WHERE cs.id = :candidate_id AND cs.job_id = :job_id AND j.user_id = :uid AND j.active = 1
+            """,
+            {"candidate_id": candidate_id, "job_id": job_id, "uid": current_user.id},
+        ).fetchone()
 
-    if job is None:
+    if row is None:
         abort(404)
 
-    # 1. ALIGN VARIABLE NAMES
-    # We extract these here so they are available for generate_ai_summary
-    job_title = job["title"] 
+    response = send_file(
+        BytesIO(bytes(row["data"])),  # PostgreSQL hands back a memoryview; bytes() makes it a normal copy
+        mimetype=row["content_type"],
+        download_name=row["filename"],
+        as_attachment=False,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+@app.route("/recruiter/jobs/<int:job_id>/rank", methods=["POST"])
+@login_required
+def rank_job_resumes(job_id):
+    with get_db() as conn:
+        job = get_owned_job(conn, job_id)
+
+    job_title = job["title"]
     job_description = job["description"]
-    
+
     required_skills = extract_required_skills(job_description)
     submitted_names = [name.strip() for name in request.form.getlist("candidate_names")]
 
     results = []
+    skipped = []   # (file name, reason) for files that could not be used
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
-    
-    for index, file in enumerate(request.files.getlist("resumes")):
-        filename = file.filename.lower()
-        if not (filename.endswith(".pdf") or filename.endswith(".docx")):
+
+    uploaded_files = [f for f in request.files.getlist("resumes") if f and f.filename]
+    for index, file in enumerate(uploaded_files):
+        original_filename, data, problem = read_uploaded_resume(file)
+        if problem:
+            skipped.append((original_filename, problem))
             continue
 
-        original_filename, saved_filename = save_uploaded_resume(file)
-        filename = original_filename.lower()
-        if filename.endswith(".pdf"):
-            text = parse_pdf(file)
-        elif filename.endswith(".docx"):
-            text = parse_docx(file)
+        try:
+            if original_filename.lower().endswith(".pdf"):
+                text = parse_pdf(BytesIO(data))
+            else:
+                text = parse_docx(BytesIO(data))
+        except Exception as e:
+            print(f"Could not read {original_filename}: {e}")
+            skipped.append((original_filename, "the file could not be read (damaged or password-protected?)"))
+            continue
 
         score, matched, missing, keyword_score, semantic_score = calculate_score_components(
             text, job_description, required_skills, job["keyword_weight"]
@@ -1477,14 +1312,12 @@ def rank_job_resumes(job_id):
 
         # Determine candidate name
         candidate_name = submitted_names[index] if index < len(submitted_names) and submitted_names[index] else candidate_name_from_filename(original_filename)
-        
-        # 2. UPDATED FUNCTION CALL
-        # Note: We use job_description (the variable we created above)
+
         summary = generate_ai_summary(
-            candidate_name=candidate_name, 
-            job_title=job_title, 
-            job_description=job_description, 
-            matched=matched, 
+            candidate_name=candidate_name,
+            job_title=job_title,
+            job_description=job_description,
+            matched=matched,
             missing=missing
         )
 
@@ -1492,7 +1325,7 @@ def rank_job_resumes(job_id):
             "candidate": candidate_name,
             "candidate_name": candidate_name,
             "file_name": original_filename,
-            "file_url": url_for("uploaded_file", filename=saved_filename),
+            "file_url": None,          # filled in once the file is saved and has an id
             "score": score,
             "keyword_score": keyword_score,
             "semantic_score": semantic_score,
@@ -1501,50 +1334,72 @@ def rank_job_resumes(job_id):
             "missing": missing,
             "summary": summary,
             "shortlisted": score >= 70,
+            "_file_data": data,
+            "_content_type": RESUME_CONTENT_TYPES[Path(original_filename).suffix.lower()],
         })
 
     results.sort(key=lambda x: x["score"], reverse=True)
-    
+
     if results:
-        with get_db_connection() as conn:
+        with get_db() as conn:
             for result in results:
-                conn.execute(
+                candidate_id = conn.execute(
                     """
-                    INSERT INTO candidate_scores 
+                    INSERT INTO candidate_scores
                         (job_id, candidate_name, file_name, score, keyword_score, semantic_score, resume_text,
                          matched_skills, missing_skills, summary, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (:job_id, :candidate_name, :file_name, :score, :keyword_score, :semantic_score, :resume_text,
+                            :matched_skills, :missing_skills, :summary, :created_at)
+                    RETURNING id
                     """,
-                    (
-                        job_id,
-                        result["candidate_name"],
-                        result["file_name"],
-                        result["score"],
-                        result["keyword_score"],
-                        result["semantic_score"],
-                        result["resume_text"],
-                        json.dumps(result["matched"]),
-                        json.dumps(result["missing"]),
-                        result["summary"],
-                        timestamp,
-                    ),
+                    {
+                        "job_id": job_id,
+                        "candidate_name": result["candidate_name"],
+                        "file_name": result["file_name"],
+                        "score": result["score"],
+                        "keyword_score": result["keyword_score"],
+                        "semantic_score": result["semantic_score"],
+                        "resume_text": result["resume_text"],
+                        "matched_skills": json.dumps(result["matched"]),
+                        "missing_skills": json.dumps(result["missing"]),
+                        "summary": result["summary"],
+                        "created_at": timestamp,
+                    },
+                ).scalar()
+                conn.execute(
+                    """
+                    INSERT INTO resume_files (candidate_id, filename, content_type, size_bytes, data)
+                    VALUES (:candidate_id, :filename, :content_type, :size_bytes, :data)
+                    """,
+                    {
+                        "candidate_id": candidate_id,
+                        "filename": result["file_name"],
+                        "content_type": result["_content_type"],
+                        "size_bytes": len(result["_file_data"]),
+                        "data": result["_file_data"],
+                    },
                 )
                 conn.execute(
-                    "INSERT INTO activity (job_id, message, score, created_at) VALUES (?, ?, ?, ?)",
-                    (
-                        job_id,
-                        f"{result['candidate_name']} added to {job_title}",
-                        result["score"],
-                        timestamp,
-                    ),
+                    "INSERT INTO activity (job_id, message, score, created_at) VALUES (:job_id, :message, :score, :created_at)",
+                    {
+                        "job_id": job_id,
+                        "message": f"{result['candidate_name']} added to {job_title}",
+                        "score": result["score"],
+                        "created_at": timestamp,
+                    },
                 )
-            conn.commit() # Don't forget to commit your changes!
+                result["file_url"] = url_for("download_resume", job_id=job_id, candidate_id=candidate_id)
+
+    for result in results:
+        result.pop("_file_data", None)
+        result.pop("_content_type", None)
 
     return render_template(
         "result.html",
         results=results,
         required_skills=sorted(required_skills),
         job=job,
+        skipped=skipped,
     )
 
 @app.route("/job_seeker")
@@ -1556,6 +1411,7 @@ def resume_builder():
     return render_template("resume_builder.html")
 
 @app.route("/analyze_job_seeker_resume", methods=["POST"])
+@csrf.exempt  # public job seeker tool, no login or session involved
 def analyze_job_seeker_resume():
     job_description = request.form.get("job_description", "").strip()
     resume_file = request.files.get("resume")
@@ -1684,6 +1540,7 @@ def check_builder_ats_structure(resume_data):
     return feedback
 
 @app.route("/download_resume_docx", methods=["POST"])
+@csrf.exempt  # public job seeker tool, no login or session involved
 def download_resume_docx():
     full_name = request.form.get("full_name", "Resume")
     email = request.form.get("email", "")
@@ -1949,6 +1806,7 @@ RECOMMENDATIONS:
 - Use standard section headings to improve ATS compatibility."""
 
 @app.route("/generate_resume", methods=["POST"])
+@csrf.exempt  # public job seeker tool, no login or session involved
 def generate_resume():
     skills = safe_json_loads(request.form.get("skills_json"))
     experiences = safe_json_loads(request.form.get("experiences_json"))
@@ -2055,9 +1913,6 @@ def generate_resume():
 def service_worker():
     return send_from_directory("static", "service-worker.js")
 
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_DIR, filename)
-
 if __name__ == "__main__":
+    # Local development only. On Azure the app is started by gunicorn.
     app.run(debug=True)

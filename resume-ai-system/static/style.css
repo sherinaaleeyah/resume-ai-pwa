@@ -5109,3 +5109,65 @@ body.lp.has-cursor-glow::after { opacity: 1; }
 @media (pointer: coarse), (prefers-reduced-motion: reduce) {
     body.lp::after { display: none; }
 }
+
+/* ============================================================
+   RECRUITER SIGN-IN / SIGN-UP  (body.rw.auth-page)
+   ============================================================ */
+.auth-page { min-height: 100vh; }
+.auth-wrap { display: grid; place-items: start center; padding: 48px 0 64px; }
+.auth-card { width: min(520px, 100%); }
+.auth-card .rw-card-head { margin-bottom: 18px; }
+.auth-card h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; color: var(--black); }
+.auth-card input[type="text"],
+.auth-card input[type="email"],
+.auth-card input[type="password"],
+.auth-card input[type="tel"] {
+    width: 100%;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--black);
+    font: inherit;
+    font-size: 0.92rem;
+    padding: 10px 14px;
+    transition: border-color var(--t), box-shadow var(--t);
+}
+.auth-card input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.auth-card .btn { width: 100%; justify-content: center; }
+.auth-hint { font-size: 0.78rem; color: var(--gray-500); text-transform: none; letter-spacing: 0; font-weight: 500; }
+.auth-optional { font-weight: 500; color: var(--gray-400); text-transform: none; letter-spacing: 0; }
+.auth-switch { margin: 18px 0 0; text-align: center; font-size: 0.88rem; color: var(--gray-500); }
+.auth-switch a { color: var(--accent); font-weight: 600; }
+.auth-alert {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 14px; margin-bottom: 18px;
+    border-radius: var(--radius-sm); font-size: 0.88rem; line-height: 1.5;
+}
+.auth-alert i { margin-top: 3px; }
+.auth-alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.auth-alert-info  { background: var(--lime-tint); border: 1px solid var(--lime-line); color: var(--lime-ink); }
+@media (max-width: 560px) {
+    .auth-card .form-row { grid-template-columns: 1fr; }
+    .auth-wrap { padding: 28px 0 48px; }
+}
+
+/* Signed-in user shown in the recruiter navbar */
+.nav-user { display: flex; align-items: center; gap: 12px; }
+.nav-user-info { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.nav-user-name { color: var(--white); font-size: 0.82rem; font-weight: 600; }
+.nav-user-company { color: rgba(255,255,255,0.55); font-size: 0.74rem; }
+.nav-user form { margin: 0; }
+.nav-logout {
+    background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75);
+    border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: color var(--t), background var(--t);
+}
+.nav-logout:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+@media (max-width: 720px) { .nav-user-info { display: none; } }
+
+/* Notice listing resume files that were skipped during upload */
+.skipped-notice {
+    margin: 0 0 18px; padding: 14px 18px; border-radius: var(--radius-sm);
+    background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.9rem;
+}
+.skipped-notice ul { margin: 6px 0 0; padding-left: 20px; }
