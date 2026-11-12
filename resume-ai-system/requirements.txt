@@ -9,3 +9,7 @@ python-dotenv
 gunicorn
 Werkzeug
 sentence-transformers
+SQLAlchemy>=2.0,<2.1
+psycopg2-binary>=2.9.9
+Flask-Login>=0.6.3
+Flask-WTF>=1.2.1

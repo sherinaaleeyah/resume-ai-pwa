@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Recruiter sign in · TalentMatch</title>
+  {% include "_auth_head.html" %}
+</head>
+<body class="rw auth-page">
+  <nav class="navbar app-nav">
+    <div class="container-fluid dashboard-shell">
+      <div class="nav-left">
+        <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
+        <span class="nav-mode-pill">Recruiter</span>
+      </div>
+      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+    </div>
+  </nav>
+
+  <main class="dashboard-shell auth-wrap">
+    <section class="rw-card auth-card">
+      <div class="rw-card-head">
+        <div>
+          <h1>Recruiter sign in</h1>
+          <p>Sign in to manage your job postings and ranked candidates.</p>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="auth-alert auth-alert-info" role="status"><i class="fa-solid fa-circle-info"></i><span>{{ message }}</span></div>
+        {% endfor %}
+      {% endwith %}
+      {% if error %}
+        <div class="auth-alert auth-alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error }}</span></div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('auth.login') }}" class="upload-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+        <div class="form-group">
+          <label for="email">Work email</label>
+          <input id="email" type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button>
+      </form>
+
+      <p class="auth-switch">New recruiter? <a href="{{ url_for('auth.signup') }}">Create an account</a></p>
+    </section>
+  </main>
+</body>
+</html>

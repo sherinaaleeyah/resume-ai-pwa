@@ -36,6 +36,15 @@
       </div>
     </section>
 
+    {% if skipped %}
+    <div class="skipped-notice" role="alert">
+      <strong><i class="fa-solid fa-triangle-exclamation"></i> {{ skipped|length }} file{{ 's' if skipped|length != 1 }} not added:</strong>
+      <ul>
+        {% for name, reason in skipped %}<li>{{ name }}: {{ reason }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
     <section class="table-wrap">
       <table class="table align-middle">
         <thead>

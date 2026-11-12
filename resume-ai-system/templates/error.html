@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{{ title }} · TalentMatch</title>
+  {% include "_auth_head.html" %}
+</head>
+<body class="rw auth-page">
+  <main class="dashboard-shell auth-wrap">
+    <section class="rw-card auth-card">
+      <div class="rw-card-head">
+        <div>
+          <h1>{{ title }}</h1>
+          <p>{{ message }}</p>
+        </div>
+      </div>
+      <a class="btn btn-primary" href="javascript:history.back()"><i class="fa-solid fa-arrow-left"></i> Go back</a>
+    </section>
+  </main>
+</body>
+</html>
