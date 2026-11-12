@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{% block title %}Recruiter{% endblock %} · TalentMatch</title>
+  {% include "_auth_head.html" %}
+</head>
+<body class="rw auth-page">
+  <nav class="navbar app-nav">
+    <div class="container-fluid dashboard-shell">
+      <div class="nav-left">
+        <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
+        <span class="nav-mode-pill">Recruiter</span>
+      </div>
+      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+    </div>
+  </nav>
+
+  <div class="auth-split">
+
+    <aside class="auth-aside">
+      <div class="auth-aside-inner">
+        <span class="auth-kicker">{% block kicker %}Recruiter workspace{% endblock %}</span>
+        <h2>{% block aside_heading %}Rank every resume <em>in seconds.</em>{% endblock %}</h2>
+        <p class="auth-aside-text">{% block aside_text %}Score candidates against your job description and see exactly why each one matched.{% endblock %}</p>
+
+        <!-- Decorative preview, not real data -->
+        <div class="auth-mock" aria-hidden="true">
+          <div class="auth-mock-row">
+            <span class="auth-mock-name">Candidate A<small>Strong match</small></span>
+            <span class="auth-mock-bar"><i style="width: 92%"></i></span>
+            <span class="auth-mock-score">92</span>
+          </div>
+          <div class="auth-mock-row">
+            <span class="auth-mock-name">Candidate B<small>Partial match</small></span>
+            <span class="auth-mock-bar"><i class="mid" style="width: 61%"></i></span>
+            <span class="auth-mock-score">61</span>
+          </div>
+          <div class="auth-mock-row">
+            <span class="auth-mock-name">Candidate C<small>Weak match</small></span>
+            <span class="auth-mock-bar"><i class="low" style="width: 28%"></i></span>
+            <span class="auth-mock-score">28</span>
+          </div>
+        </div>
+
+        <ul class="auth-points">
+          <li><i class="fa-solid fa-lock"></i> Your jobs and candidates stay private to your account.</li>
+          <li><i class="fa-solid fa-wand-magic-sparkles"></i> Every score comes with matched and missing skills.</li>
+          <li><i class="fa-solid fa-file-lines"></i> Uploaded resumes are stored behind your login.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="auth-main">
+      <section class="auth-card">
+        {% block card %}{% endblock %}
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    // Show / hide password buttons
+    document.querySelectorAll(".pw-toggle").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var input = document.getElementById(btn.getAttribute("data-target"));
+        if (!input) return;
+        var show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        var icon = btn.querySelector("i");
+        if (icon) {
+          icon.classList.toggle("fa-eye", !show);
+          icon.classList.toggle("fa-eye-slash", show);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

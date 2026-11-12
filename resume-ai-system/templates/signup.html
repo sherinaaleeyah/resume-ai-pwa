@@ -1,85 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>Create recruiter account · TalentMatch</title>
-  {% include "_auth_head.html" %}
-</head>
-<body class="rw auth-page">
-  <nav class="navbar app-nav">
-    <div class="container-fluid dashboard-shell">
-      <div class="nav-left">
-        <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
-        <span class="nav-mode-pill">Recruiter</span>
-      </div>
-      <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+{% extends "auth_base.html" %}
+{% block title %}Create recruiter account{% endblock %}
+{% block kicker %}For recruiters{% endblock %}
+{% block aside_heading %}Your shortlist, <em>ranked in seconds.</em>{% endblock %}
+{% block aside_text %}Create a recruiter account to post jobs, upload resumes and get explainable match scores. Job seekers don't need an account.{% endblock %}
+
+{% block card %}
+  <h1>Create your account</h1>
+  <p class="auth-lead">Recruiter accounts keep your job postings and candidate rankings private.</p>
+
+  {% if error %}
+    <div class="auth-alert auth-alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error }}</span></div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('auth.signup') }}" class="upload-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+      <label for="full_name">Full name</label>
+      <input id="full_name" type="text" name="full_name" value="{{ form.full_name }}" maxlength="100" autocomplete="name" required autofocus>
     </div>
-  </nav>
 
-  <main class="dashboard-shell auth-wrap">
-    <section class="rw-card auth-card">
-      <div class="rw-card-head">
-        <div>
-          <h1>Create a recruiter account</h1>
-          <p>Recruiter accounts keep your job postings and candidate rankings private. Job seekers don't need an account.</p>
+    <div class="form-group">
+      <label for="email">Work email</label>
+      <input id="email" type="email" name="email" value="{{ form.email }}" maxlength="254" placeholder="you@company.com" autocomplete="email" required>
+    </div>
+
+    <div class="form-group">
+      <label for="company_name">Company name</label>
+      <input id="company_name" type="text" name="company_name" value="{{ form.company_name }}" maxlength="120" autocomplete="organization" required>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="job_title">Job title <span class="auth-optional">(optional)</span></label>
+        <input id="job_title" type="text" name="job_title" value="{{ form.job_title }}" maxlength="100" autocomplete="organization-title">
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone <span class="auth-optional">(optional)</span></label>
+        <input id="phone" type="tel" name="phone" value="{{ form.phone }}" maxlength="30" autocomplete="tel">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="pw-field">
+          <input id="password" type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <button type="button" class="pw-toggle" data-target="password" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye"></i></button>
+        </div>
+        <span class="auth-hint">At least 8 characters.</span>
+      </div>
+      <div class="form-group">
+        <label for="confirm_password">Confirm password</label>
+        <div class="pw-field">
+          <input id="confirm_password" type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <button type="button" class="pw-toggle" data-target="confirm_password" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye"></i></button>
         </div>
       </div>
+    </div>
 
-      {% if error %}
-        <div class="auth-alert auth-alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error }}</span></div>
-      {% endif %}
+    {% if invite_required %}
+    <div class="form-group">
+      <label for="invite_code">Invite code</label>
+      <input id="invite_code" type="text" name="invite_code" autocomplete="off" required>
+      <span class="auth-hint">Sign-up is invite-only. Ask the TalentMatch team for the code.</span>
+    </div>
+    {% endif %}
 
-      <form method="post" action="{{ url_for('auth.signup') }}" class="upload-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary auth-submit"><i class="fa-solid fa-user-plus"></i> Create account</button>
+  </form>
 
-        <div class="form-group">
-          <label for="full_name">Full name</label>
-          <input id="full_name" type="text" name="full_name" value="{{ form.full_name }}" maxlength="100" autocomplete="name" required autofocus>
-        </div>
-        <div class="form-group">
-          <label for="email">Work email</label>
-          <input id="email" type="email" name="email" value="{{ form.email }}" maxlength="254" autocomplete="email" required>
-        </div>
-        <div class="form-group">
-          <label for="company_name">Company name</label>
-          <input id="company_name" type="text" name="company_name" value="{{ form.company_name }}" maxlength="120" autocomplete="organization" required>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="job_title">Job title <span class="auth-optional">(optional)</span></label>
-            <input id="job_title" type="text" name="job_title" value="{{ form.job_title }}" maxlength="100" autocomplete="organization-title">
-          </div>
-          <div class="form-group">
-            <label for="phone">Phone <span class="auth-optional">(optional)</span></label>
-            <input id="phone" type="tel" name="phone" value="{{ form.phone }}" maxlength="30" autocomplete="tel">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input id="password" type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" required>
-            <span class="auth-hint">At least 8 characters.</span>
-          </div>
-          <div class="form-group">
-            <label for="confirm_password">Confirm password</label>
-            <input id="confirm_password" type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required>
-          </div>
-        </div>
-
-        {% if invite_required %}
-        <div class="form-group">
-          <label for="invite_code">Invite code</label>
-          <input id="invite_code" type="text" name="invite_code" autocomplete="off" required>
-          <span class="auth-hint">Sign-up is invite-only. Ask the TalentMatch team for the code.</span>
-        </div>
-        {% endif %}
-
-        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Create account</button>
-      </form>
-
-      <p class="auth-switch">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
-    </section>
-  </main>
-</body>
-</html>
+  <p class="auth-switch">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}
