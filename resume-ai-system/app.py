@@ -165,6 +165,9 @@ TECH_PATTERNS = [
     r'\bjupyter(?: notebooks?)?\b',
     r'\bhugging face\b',
     r'\blangchain\b',
+    r'\bllama ?index\b',
+    r'\brag\b',
+    r'\bretrieval[- ]augmented generation\b',
     r'\bopenai\b',
     r'\bchatgpt\b',
     r'\bgemini(?: api)?\b',
@@ -387,6 +390,7 @@ TECH_PATTERNS = [
     r'\beclipse\b',
     r'\bblockchain\b',
     r'\bsdlc\b',
+    r'\bsoftware development life ?cycle\b',
     r'\bagile\b',
     r'\bscrum\b',
     r'\bapi development\b',
@@ -825,6 +829,9 @@ SKILL_ALIASES = {
     "data visualisation": ["data visualization", "data visualisations", "data visualizations"],
     "jupyter notebook": ["jupyter", "jupyter notebooks"],
     "gemini api": ["gemini"],
+    "llamaindex": ["llama index"],
+    "rag": ["retrieval augmented generation", "retrieval-augmented generation"],
+    "sdlc": ["software development life cycle", "software development lifecycle"],
 }
 CANONICAL_SKILL = {alias: name for name, aliases in SKILL_ALIASES.items() for alias in aliases}
 
