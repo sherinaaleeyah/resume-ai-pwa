@@ -66,10 +66,10 @@
         <div class="jr-ring" data-score="{{ _s }}" role="img" aria-label="Resume match score {{ _si }} percent, {{ _band }}">
           <svg viewBox="0 0 150 150" aria-hidden="true">
             <circle class="jr-ring-track" cx="75" cy="75" r="65"/>
-            <circle class="jr-ring-fill" id="jrRingFill" cx="75" cy="75" r="65" style="stroke-dasharray: {{ ([[_s, 0]|max, 100]|min / 100 * 408.41)|round(1) }} 408.41; stroke: {{ _rc }};"/>
+            <circle class="jr-ring-fill" id="jrRingFill" cx="75" cy="75" r="65" style="--ring-dash: {{ ([[_s, 0]|max, 100]|min / 100 * 408.41)|round(1) }}; --ring-color: {{ _rc }}; stroke-dasharray: var(--ring-dash) 408.41; stroke: var(--ring-color);"/>
           </svg>
           <div class="jr-ring-inner">
-            <strong id="jrRingNum" style="color: {{ _rc }};">{{ _si }}</strong>
+            <strong id="jrRingNum" style="--ring-color: {{ _rc }}; color: var(--ring-color);">{{ _si }}</strong>
             <span>Match %</span>
           </div>
         </div>
@@ -180,7 +180,7 @@
     </div>
 
     {% if _has_target %}
-      <div class="jr-coverage" aria-hidden="true"><span style="width: {{ _coverage }}%"></span></div>
+      <div class="jr-coverage" aria-hidden="true"><span style="--coverage: {{ _coverage }}%; width: var(--coverage);"></span></div>
       <div class="jr-skill-cols">
         <div>
           <h3 class="jr-skill-head jr-good"><i class="fa-solid fa-circle-check"></i> Matched <span>{{ matched|length }}</span></h3>
@@ -228,7 +228,7 @@
       </div>
       <div class="rp-toolbar-actions">
         <button type="button" class="rp-btn-quiet" id="copyText"><i class="fa-regular fa-copy"></i> <span>Copy text</span></button>
-        <button type="button" onclick="window.print()" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-pdf"></i> Save as PDF</button>
+        <button type="button" onclick="saveResumePdf()" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-pdf"></i> Save as PDF</button>
         <form action="/download_resume_docx" method="post" onsubmit="prepareDocxDownload()" id="docxForm">
           <input type="hidden" name="full_name"      id="docx_full_name">
           <input type="hidden" name="email"          id="docx_email">
@@ -308,6 +308,15 @@
     document.getElementById("docx_education").value      = getText("resume_education");
     document.getElementById("docx_projects").value       = getText("resume_projects");
     document.getElementById("docx_certifications").value = getText("resume_certifications");
+  }
+
+  // Print styles hide everything but the resume; the browser uses the title as the PDF file name
+  function saveResumePdf() {
+    const pageTitle = document.title;
+    const name = getText("resume_full_name");
+    document.title = name ? `${name} - Resume` : "Resume";
+    window.addEventListener("afterprint", () => { document.title = pageTitle; }, { once: true });
+    window.print();
   }
 
   (function () {

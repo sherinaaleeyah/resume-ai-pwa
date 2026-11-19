@@ -81,10 +81,10 @@
           <div class="jr-ring" data-score="{{ _s }}" role="img" aria-label="Match score {{ _si }} percent, {{ _band }}">
             <svg viewBox="0 0 150 150" aria-hidden="true">
               <circle class="jr-ring-track" cx="75" cy="75" r="65"/>
-              <circle class="jr-ring-fill" id="jrRingFill" cx="75" cy="75" r="65" style="stroke-dasharray: {{ ([[_s, 0]|max, 100]|min / 100 * 408.41)|round(1) }} 408.41; stroke: {{ _rc }};"/>
+              <circle class="jr-ring-fill" id="jrRingFill" cx="75" cy="75" r="65" style="--ring-dash: {{ ([[_s, 0]|max, 100]|min / 100 * 408.41)|round(1) }}; --ring-color: {{ _rc }}; stroke-dasharray: var(--ring-dash) 408.41; stroke: var(--ring-color);"/>
             </svg>
             <div class="jr-ring-inner">
-              <strong id="jrRingNum" style="color: {{ _rc }};">{{ _si }}</strong>
+              <strong id="jrRingNum" style="--ring-color: {{ _rc }}; color: var(--ring-color);">{{ _si }}</strong>
               <span>Match %</span>
             </div>
           </div>
