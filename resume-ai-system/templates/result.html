@@ -3,122 +3,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Candidate Ranking</title>
+  <title>Ranking results{% if job %} · {{ job.title }}{% endif %} · TalentMatch</title>
+  <meta name="theme-color" content="#0f0f14">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
-<body>
+<body class="rw">
+  {% set back_url = url_for('job_detail', job_id=job.id) if job else url_for('recruiter') %}
+  {% set shortlisted_count = results|selectattr('shortlisted')|list|length %}
+
   <nav class="navbar app-nav">
     <div class="container-fluid dashboard-shell">
       <div class="nav-left">
         <a href="/" class="navbar-brand"><span class="brand-mark" aria-hidden="true"></span> TalentMatch</a>
         <span class="nav-mode-pill">Recruiter</span>
       </div>
-      {% if job %}
-        <a class="btn btn-outline-light btn-sm" href="{{ url_for('job_detail', job_id=job.id) }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
-      {% else %}
-        <a class="btn btn-outline-light btn-sm" href="/recruiter"><i class="fa-solid fa-arrow-left"></i> Back</a>
-      {% endif %}
+      <div class="app-nav-links">
+        <a href="{{ url_for('recruiter') }}">Dashboard</a>
+        <a href="{{ url_for('recruiter') }}#job-form">New job</a>
+      </div>
+      <div class="nav-user">
+        <a class="rw-nav-exit" href="/"><i class="fa-solid fa-arrow-left"></i> <span>Back to site</span></a>
+        <div class="nav-user-info">
+          <span class="nav-user-name">{{ current_user.full_name }}</span>
+          <span class="nav-user-company">{{ current_user.company_name }}</span>
+        </div>
+        <form action="{{ url_for('auth.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="nav-logout"><i class="fa-solid fa-right-from-bracket"></i> <span>Sign out</span></button>
+        </form>
+      </div>
     </div>
   </nav>
 
-  <main class="dashboard-shell">
-    <section class="results-header">
-      <div>
-        <span class="eyebrow">Automated Ranking System</span>
-        <h1>Ranked candidates{% if job %}: {{ job.title }}{% endif %}</h1>
-        <p>Candidates scoring 70% or higher are marked as shortlisted. Skill gaps are shown for explainable review.</p>
+  <header class="rw-band">
+    <div class="dashboard-shell rw-band-inner">
+      <div class="rw-band-top">
+        <nav class="rw-crumbs" aria-label="Breadcrumb">
+          <a href="{{ url_for('recruiter') }}">Dashboard</a>
+          {% if job %}
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            <a href="{{ back_url }}">{{ job.title }}</a>
+          {% endif %}
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          <span aria-current="page">Upload results</span>
+        </nav>
+        <a href="{{ back_url }}" class="rw-btn-ghost">
+          <i class="fa-solid fa-arrow-left"></i> {{ 'Back to job' if job else 'Back to dashboard' }}
+        </a>
       </div>
-      <div class="shortlist-card">
-        <strong>{{ results|selectattr('shortlisted')|list|length }}</strong>
-        <span>Shortlisted</span>
-      </div>
-    </section>
 
+      <div class="rw-job-head">
+        <div class="rw-job-title">
+          <span class="rw-kicker">Upload results</span>
+          <h1>{{ job.title if job else 'Ranked candidates' }}</h1>
+          {% if job %}<p><i class="fa-regular fa-building"></i> {{ job.company }}</p>{% endif %}
+
+          {% if required_skills %}
+          <div class="rw-band-skills">
+            <span class="rw-band-label">Scored against</span>
+            <div class="skill-list">
+              {% for skill in required_skills %}
+                <span class="skill-tag">{{ skill }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <dl class="rw-stats" aria-label="Upload summary">
+          <div><dt>Scored</dt><dd>{{ results|length }}</dd></div>
+          <div><dt>Shortlisted</dt><dd>{{ shortlisted_count }}</dd></div>
+          <div><dt>Top score</dt><dd>{{ (results|map(attribute='score')|max)|round|int if results else 0 }}</dd></div>
+        </dl>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard-shell rw-main">
     {% if skipped %}
-    <div class="skipped-notice" role="alert">
-      <strong><i class="fa-solid fa-triangle-exclamation"></i> {{ skipped|length }} file{{ 's' if skipped|length != 1 }} not added:</strong>
-      <ul>
-        {% for name, reason in skipped %}<li>{{ name }}: {{ reason }}</li>{% endfor %}
-      </ul>
+    <div class="rw-alert" role="alert">
+      <span class="rw-alert-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div>
+        <strong>{{ skipped|length }} file{{ 's' if skipped|length != 1 }} not added</strong>
+        <ul>
+          {% for name, reason in skipped %}<li><b>{{ name }}</b>: {{ reason }}</li>{% endfor %}
+        </ul>
+      </div>
     </div>
     {% endif %}
 
-    <section class="table-wrap">
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>Candidate</th>
-            <th>Resume File</th>
-            <th>Score</th>
-            <th>Status</th>
-            <th>Matched Skills</th>
-            <th>Missing Skills</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if results %}
-          {% for r in results %}
-          <tr>
-            <td>{{ r.candidate }}</td>
-            <td>
-              {% if r.file_url %}
-                <a class="resume-link" href="{{ r.file_url }}" target="_blank" rel="noopener">
-                  <i class="fa-solid fa-file-arrow-up"></i> {{ r.file_name }}
-                </a>
-              {% else %}
-                <span class="muted">{{ r.file_name or 'No file available' }}</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="score-cell">
-                <span>{{ r.score }}%</span>
-                <div class="progress" role="progressbar" aria-valuenow="{{ r.score }}" aria-valuemin="0" aria-valuemax="100">
-                  <div class="progress-bar" style="width: {{ r.score }}%"></div>
-                </div>
-              </div>
-            </td>
-            <td>
-              {% if r.shortlisted %}
-                <span class="status status-good">Shortlisted</span>
-              {% else %}
-                <span class="status status-review">Review</span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="skill-list" aria-label="Matched skills for {{ r.candidate }}">
-                {% if r.matched %}
-                  {% for skill in r.matched %}
-                    <span class="skill-tag matched-skill">{{ skill }}</span>
-                  {% endfor %}
-                {% else %}
-                  <span class="muted">No core skills matched</span>
-                {% endif %}
-              </div>
-            </td>
-            <td>
-              <div class="skill-list" aria-label="Missing skills for {{ r.candidate }}">
-                {% if r.missing %}
-                  {% for skill in r.missing %}
-                    <span class="skill-tag missing-skill">{{ skill }}</span>
-                  {% endfor %}
-                {% else %}
-                  <span class="muted">No missing required skills</span>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="6" class="empty-state">
-              No supported resumes were uploaded. Please upload PDF or DOCX files.
-            </td>
-          </tr>
-          {% endif %}
-        </tbody>
-      </table>
+    <section class="rw-card rr-card">
+      <div class="rw-card-head">
+        <div>
+          <h2>Ranked candidates</h2>
+          <p>Candidates scoring 70% or higher are shortlisted. Skill gaps are shown for explainable review.</p>
+        </div>
+        <span class="rw-count">{{ results|length }} scored</span>
+      </div>
+
+      <div class="rr-table-wrap">
+        <table class="rr-table">
+          <thead>
+            <tr>
+              <th scope="col">Candidate</th>
+              <th scope="col">Resume File</th>
+              <th scope="col">Score</th>
+              <th scope="col">Status</th>
+              <th scope="col">Matched Skills</th>
+              <th scope="col">Missing Skills</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if results %}
+            {% for r in results %}
+              {% set _s = r.score | float %}
+              {% if _s >= 70 %}{% set _tone = 'good' %}{% elif _s >= 50 %}{% set _tone = 'warn' %}{% else %}{% set _tone = 'bad' %}{% endif %}
+              <tr>
+                <td>
+                  <div class="rr-cand">
+                    <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-n{% endif %}" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
+                    <strong>{{ r.candidate }}</strong>
+                  </div>
+                </td>
+                <td>
+                  {% if r.file_url %}
+                    <a class="resume-link rr-file" href="{{ r.file_url }}" target="_blank" rel="noopener" title="{{ r.file_name }}">
+                      <i class="fa-regular fa-file-lines" aria-hidden="true"></i> <span>{{ r.file_name }}</span>
+                    </a>
+                  {% else %}
+                    <span class="muted">{{ r.file_name or 'No file available' }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="rr-score rr-score-{{ _tone }}">
+                    <span class="rr-score-num">{{ _s|round|int }}%</span>
+                    <div class="rr-score-track" role="progressbar" aria-label="Match score" aria-valuenow="{{ _s|round|int }}" aria-valuemin="0" aria-valuemax="100">
+                      <span style="width: {{ _s }}%"></span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {% if r.shortlisted %}
+                    <span class="rw-status rw-status-good"><i class="fa-solid fa-check" aria-hidden="true"></i> Shortlisted</span>
+                  {% else %}
+                    <span class="rw-status rw-status-warn"><i class="fa-solid fa-eye" aria-hidden="true"></i> Review</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="skill-list" aria-label="Matched skills for {{ r.candidate }}">
+                    {% if r.matched %}
+                      {% for skill in r.matched %}
+                        <span class="skill-tag matched-skill">{{ skill }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="muted">No core skills matched</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <div class="skill-list" aria-label="Missing skills for {{ r.candidate }}">
+                    {% if r.missing %}
+                      {% for skill in r.missing %}
+                        <span class="skill-tag missing-skill">{{ skill }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="muted">No missing required skills</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6">
+                  <div class="rw-empty">
+                    <span class="rw-empty-icon"><i class="fa-solid fa-file-circle-xmark"></i></span>
+                    <h3>No resumes were scored</h3>
+                    <p>No supported resumes were uploaded. Please upload PDF or DOCX files.</p>
+                    <a class="btn btn-primary btn-sm mt-2" href="{{ back_url }}"><i class="fa-solid fa-cloud-arrow-up"></i> Try again</a>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 </body>
